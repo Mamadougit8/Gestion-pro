@@ -1,0 +1,8 @@
+{
+  "name": "Gestion scolaire pro",
+  "description": "Application de gestion scolaire pour le 2nd cycle et le lycée : suivi des élèves, cartes scolaires, enseignants, matières, emploi du temps, notes, bulletins, paiements et présences.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,2211 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Gestion scolaire pro</title>
+    <meta
+      name="description"
+      content="Application de gestion scolaire pour le 2nd cycle et le lycée : suivi des élèves, cartes scolaires, enseignants, matières, emploi du temps, notes, bulletins, paiements et présences."
+    />
+    <meta property="og:title" content="Gestion scolaire pro" />
+    <meta
+      property="og:description"
+      content="Application de gestion scolaire pour le 2nd cycle et le lycée : suivi des élèves, cartes scolaires, enseignants, matières, emploi du temps, notes, bulletins, paiements et présences."
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Public+Sans:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #f3f5fa;
+        --card: #fff;
+        --ink: #161b3d;
+        --mut: #5d6385;
+        --pri: #1f2a6b;
+        --acc: #e8a317;
+        --ok: #1e7a55;
+        --bad: #b3322a;
+        --line: #d9ddec;
+        box-sizing: border-box;
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+          --bg: #0e1128;
+          --card: #171b3a;
+          --ink: #edeffa;
+          --mut: #9aa0c8;
+          --pri: #4f5cd0;
+          --acc: #f0b63a;
+          --ok: #4cc38a;
+          --bad: #f07a71;
+          --line: #2a3060;
+          color-scheme: dark;
+        }
+      }
+      :root[data-theme="dark"] {
+        --bg: #0e1128;
+        --card: #171b3a;
+        --ink: #edeffa;
+        --mut: #9aa0c8;
+        --pri: #4f5cd0;
+        --acc: #f0b63a;
+        --ok: #4cc38a;
+        --bad: #f07a71;
+        --line: #2a3060;
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-padding-top: env(safe-area-inset-top, 0px);
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          16px/1.5 "Public Sans",
+          system-ui,
+          sans-serif;
+      }
+      h1,
+      h2,
+      h3 {
+        font-family:
+          "Bricolage Grotesque", "Public Sans", system-ui, sans-serif;
+        margin: 0;
+        line-height: 1.15;
+      }
+      .app {
+        display: flex;
+        align-items: stretch;
+      }
+      header {
+        flex: 0 0 210px;
+        background: var(--pri);
+        color: #fff;
+        padding: 20px 12px;
+      }
+      header h1 {
+        font-size: 1.35rem;
+        font-weight: 800;
+      }
+      header p {
+        margin: 2px 0 18px;
+        opacity: 0.8;
+        font-size: 0.85rem;
+      }
+      nav {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        position: sticky;
+        top: 12px;
+      }
+      nav button {
+        background: transparent;
+        border: 0;
+        border-left: 4px solid transparent;
+        border-radius: 4px;
+        color: #fff;
+        opacity: 0.8;
+        padding: 11px 12px;
+        text-align: left;
+        font:
+          600 0.95rem "Public Sans",
+          sans-serif;
+        cursor: pointer;
+      }
+      nav button[aria-current="true"] {
+        opacity: 1;
+        background: rgba(255, 255, 255, 0.14);
+        border-color: var(--acc);
+      }
+      @media (max-width: 700px) {
+        .app {
+          flex-direction: column;
+        }
+        header {
+          flex: none;
+          padding: 14px 12px 0;
+        }
+        nav {
+          flex-direction: row;
+          overflow-x: auto;
+          position: static;
+        }
+        nav button {
+          white-space: nowrap;
+          border-left: 0;
+          border-bottom: 3px solid transparent;
+          border-radius: 0;
+        }
+        nav button[aria-current="true"] {
+          background: transparent;
+        }
+      }
+      nav button:focus-visible,
+      button:focus-visible,
+      input:focus-visible,
+      select:focus-visible {
+        outline: 3px solid var(--acc);
+        outline-offset: 2px;
+      }
+      main {
+        flex: 1;
+        min-width: 0;
+        max-width: 1280px;
+        padding: 20px 20px 48px;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: end;
+        margin: 14px 0;
+      }
+      label {
+        display: flex;
+        flex-direction: column;
+        font-size: 0.82rem;
+        color: var(--mut);
+        gap: 4px;
+      }
+      input,
+      select {
+        font: inherit;
+        color: var(--ink);
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 8px 10px;
+        min-height: 40px;
+      }
+      .btn {
+        background: var(--pri);
+        color: #fff;
+        border: 0;
+        border-radius: 6px;
+        padding: 9px 16px;
+        font:
+          600 0.95rem "Public Sans",
+          sans-serif;
+        cursor: pointer;
+        min-height: 40px;
+      }
+      .btn.ghost {
+        background: transparent;
+        color: var(--bad);
+        border: 1px solid var(--line);
+        padding: 4px 10px;
+        min-height: 32px;
+        font-size: 0.85rem;
+      }
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+        margin: 16px 0 24px;
+      }
+      .stat {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 14px;
+      }
+      .stat b {
+        display: block;
+        font:
+          800 2rem "Bricolage Grotesque",
+          sans-serif;
+      }
+      .stat span {
+        color: var(--mut);
+        font-size: 0.88rem;
+      }
+      .stat.hi {
+        border-left: 5px solid var(--acc);
+      }
+      .wrap {
+        overflow-x: auto;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 480px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+      }
+      th {
+        font-size: 0.85rem;
+        color: var(--mut);
+        font-weight: 600;
+      }
+      tr:last-child td {
+        border-bottom: 0;
+      }
+      td input[type="number"] {
+        width: 68px;
+        padding: 6px;
+      }
+      .wrap td:first-child,
+      .wrap th:first-child {
+        position: sticky;
+        left: 0;
+        background: var(--card);
+        z-index: 1;
+      }
+      .ok {
+        color: var(--ok);
+        font-weight: 600;
+      }
+      .bad {
+        color: var(--bad);
+        font-weight: 600;
+      }
+      .mut {
+        color: var(--mut);
+      }
+      .big {
+        font:
+          800 2.4rem "Bricolage Grotesque",
+          sans-serif;
+      }
+      h2 {
+        font-size: 1.3rem;
+        margin-top: 8px;
+      }
+      .pr,
+      .pall {
+        display: none;
+      }
+      .rcp {
+        background: var(--card);
+        border: 2px dashed var(--line);
+        border-radius: 8px;
+        padding: 16px;
+        margin: 16px 0;
+      }
+      .rcp table {
+        min-width: 0;
+      }
+      .rcp td {
+        padding: 6px 8px;
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 12px;
+      }
+      .cs {
+        border: 2px solid var(--pri);
+        border-radius: 10px;
+        padding: 10px;
+        background: var(--card);
+        break-inside: avoid;
+        font-size: 0.85rem;
+        line-height: 1.4;
+      }
+      .cs h4 {
+        margin: 0 0 2px;
+        text-align: center;
+        font:
+          800 0.95rem "Bricolage Grotesque",
+          sans-serif;
+        color: var(--pri);
+      }
+      .cs .ph {
+        float: right;
+        width: 72px;
+        height: 90px;
+        border: 1px dashed var(--mut);
+        margin: 2px 0 4px 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--mut);
+        font-size: 0.7rem;
+      }
+      .cs img.ph {
+        border: 1px solid var(--mut);
+        object-fit: cover;
+        display: block;
+      }
+      @media print {
+        :root:not([data-theme="light"]),
+        :root[data-theme="dark"],
+        :root {
+          --bg: #fff;
+          --card: #fff;
+          --ink: #000;
+          --mut: #444;
+          --line: #999;
+          --ok: #000;
+          --bad: #000;
+          color-scheme: light;
+        }
+        .app {
+          display: block;
+        }
+        header,
+        .row,
+        h2 {
+          display: none;
+        }
+        .pr {
+          display: block;
+        }
+        .pr h3 {
+          font-size: 1.4rem;
+        }
+        body.pa .one {
+          display: none;
+        }
+        body.pa .pall {
+          display: block;
+        }
+        .bl {
+          page-break-after: always;
+        }
+        .bl:last-child {
+          page-break-after: auto;
+        }
+        body.pc main > *:not(.rcp) {
+          display: none;
+        }
+        body.pc .rcp {
+          border: 0;
+        }
+        .stats {
+          grid-template-columns: repeat(4, 1fr);
+        }
+        .cards {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .cs {
+          border-color: #000;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header>
+        <h1>Gestion scolaire</h1>
+        <p>2nd cycle (7e–9e année) et lycée (10e–12e année)</p>
+        <nav id="nav"></nav>
+      </header>
+      <main id="main"></main>
+    </div>
+    <script>
+      var CL = [
+        "7e année",
+        "8e année",
+        "9e année",
+        "10e année",
+        "11e LL",
+        "11e SES",
+        "12e TLL",
+        "12e TSECO",
+      ];
+      var MA = {
+        Mathématiques: 4,
+        Français: 4,
+        "Physique-Chimie": 3,
+        SVT: 2,
+        "Histoire-Géo": 2,
+        Anglais: 2,
+        EPS: 1,
+      };
+      var MALL = {
+          Français: 4,
+          Philosophie: 3,
+          Anglais: 3,
+          "Histoire-Géo": 3,
+          Mathématiques: 2,
+          SVT: 1,
+          EPS: 1,
+        },
+        MASES = {
+          Mathématiques: 4,
+          Économie: 4,
+          "Histoire-Géo": 3,
+          Français: 3,
+          Anglais: 2,
+          Philosophie: 2,
+          EPS: 1,
+        };
+      var FR = { "7e année": 6000, "8e année": 8000, "9e année": 10000 };
+      function MAof(c) {
+        if (S.mc && S.mc[c]) return S.mc[c];
+        return /LL$/.test(c) ? MALL : /(SES|SECO)$/.test(c) ? MASES : MA;
+      }
+      var TABS = [
+        ["home", "Tableau de bord"],
+        ["eleves", "Élèves"],
+        ["cartes", "Cartes scolaires"],
+        ["ens", "Enseignants"],
+        ["mat", "Matières"],
+        ["edt", "Emploi du temps"],
+        ["notes", "Notes"],
+        ["bulletin", "Bulletins"],
+        ["res", "Admis et redoublants"],
+        ["paie", "Paiements"],
+        ["abs", "Absences"],
+        ["adm", "Administration"],
+      ];
+      var tab = "home",
+        ui = {
+          cl: CL[0],
+          mat: "Mathématiques",
+          t: 1,
+          el: "",
+          date: new Date().toISOString().slice(0, 10),
+          fcl: "",
+          pcl: CL[0],
+        };
+      function seed() {
+        var n = [
+          ["Aminata Traoré", 0],
+          ["Moussa Keïta", 0],
+          ["Fatoumata Diarra", 1],
+          ["Ibrahim Coulibaly", 2],
+          ["Mariam Sangaré", 3],
+          ["Seydou Konaté", 4],
+          ["Awa Dembélé", 5],
+          ["Oumar Sissoko", 5],
+        ];
+        return {
+          eleves: n.map(function (x, i) {
+            return { id: "e" + i, nom: x[0], cl: CL[x[1]] };
+          }),
+          notes: {},
+          abs: {},
+        };
+      }
+      var S;
+      try {
+        S = JSON.parse(localStorage.getItem("gs"));
+      } catch (e) {}
+      if (!S || !S.eleves) S = seed();
+      S.paie = S.paie || [];
+      S.ens = S.ens || [];
+      S.dec = S.dec || {};
+      S.notes = S.notes || {};
+      Object.keys(S.notes).forEach(function (k) {
+        if (k.split("|").length == 3) {
+          S.notes[k + "|c"] = S.notes[k];
+          delete S.notes[k];
+        }
+      });
+      S.appel = S.appel || {};
+      S.eleves.forEach(function (e) {
+        if (e.cl == "11e année") e.cl = "11e LL";
+        if (e.cl == "12e année") e.cl = "12e TLL";
+      });
+      function apiPost(url, data) {
+        return fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        }).catch(function (e) {
+          console.warn("SQL API write error:", e);
+        });
+      }
+      function apiDelete(url) {
+        return fetch(url, { method: "DELETE" }).catch(function (e) {
+          console.warn("SQL API delete error:", e);
+        });
+      }
+      function syncEdt(classe) {
+        if (!S.edt || !S.edt[classe]) return;
+        apiPost("/api/edt", {
+          classe: classe,
+          creneaux: S.edt[classe].sl,
+          grille: S.edt[classe].c,
+        });
+      }
+      function save() {
+        try {
+          localStorage.setItem("gs", JSON.stringify(S));
+        } catch (e) {}
+      }
+      function esc(s) {
+        return String(s).replace(/[&<>"]/g, function (c) {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+        });
+      }
+      function cyc(c) {
+        return parseInt(c) <= 9 ? "2nd cycle" : "Lycée";
+      }
+      function opts(a, v) {
+        return a
+          .map(function (x) {
+            return (
+              "<option" + (x == v ? " selected" : "") + ">" + x + "</option>"
+            );
+          })
+          .join("");
+      }
+      function moy(id, t) {
+        var e = S.eleves.filter(function (x) {
+            return x.id == id;
+          })[0],
+          M = MAof(e ? e.cl : CL[0]),
+          s = 0,
+          c = 0;
+        for (var m in M) {
+          var v = nm(id, m, t);
+          if (v !== null) {
+            s += v * M[m];
+            c += M[m];
+          }
+        }
+        return c ? s / c : null;
+      }
+      function f(x) {
+        return x === null ? "–" : x.toFixed(2).replace(".", ",");
+      }
+      function mention(m) {
+        return m === null
+          ? ""
+          : m >= 16
+            ? "Très bien"
+            : m >= 14
+              ? "Bien"
+              : m >= 12
+                ? "Assez bien"
+                : m >= 10
+                  ? "Passable"
+                  : "Insuffisant";
+      }
+      function cls(m) {
+        return m === null ? "mut" : m >= 10 ? "ok" : "bad";
+      }
+      function inCl(c) {
+        return S.eleves.filter(function (e) {
+          return e.cl == c;
+        });
+      }
+      function go(t) {
+        tab = t;
+        draw();
+      }
+      function draw() {
+        document.getElementById("nav").innerHTML = TABS.map(function (t) {
+          return (
+            '<button aria-current="' +
+            (t[0] == tab) +
+            '" onclick="go(\'' +
+            t[0] +
+            "')\">" +
+            t[1] +
+            "</button>"
+          );
+        }).join("");
+        document.getElementById("main").innerHTML = V[tab]();
+      }
+      var V = {
+        home: function () {
+          var n = S.eleves.length,
+            c2 = S.eleves.filter(function (e) {
+              return cyc(e.cl) == "2nd cycle";
+            }).length;
+          var ab = S.eleves.filter(function (e) {
+            return S.abs[ui.date + "|" + e.id];
+          }).length;
+          var rows = CL.map(function (c) {
+            var l = inCl(c),
+              m = l
+                .map(function (e) {
+                  return moy(e.id, ui.t);
+                })
+                .filter(function (x) {
+                  return x !== null;
+                }),
+              a = m.length
+                ? m.reduce(function (x, y) {
+                    return x + y;
+                  }) / m.length
+                : null;
+            return (
+              "<tr><td>" +
+              c +
+              '</td><td class="mut">' +
+              cyc(c) +
+              "</td><td>" +
+              l.length +
+              '</td><td class="' +
+              cls(a) +
+              '">' +
+              f(a) +
+              "</td></tr>"
+            );
+          }).join("");
+          return (
+            '<div class="stats"><div class="stat hi"><b>' +
+            n +
+            "</b><span>élèves inscrits</span></div><div class=stat><b>" +
+            c2 +
+            "</b><span>au 2nd cycle</span></div><div class=stat><b>" +
+            (n - c2) +
+            "</b><span>au lycée</span></div><div class=stat><b>" +
+            S.ens.length +
+            "</b><span>enseignants</span></div><div class=stat><b class=ok>" +
+            S.eleves.filter(function (e) {
+              return dec(e) == "Admis";
+            }).length +
+            "</b><span>admis</span></div><div class=stat><b class=bad>" +
+            S.eleves.filter(function (e) {
+              return dec(e) == "Redouble";
+            }).length +
+            "</b><span>redoublants</span></div></div>" +
+            pres() +
+            sxs() +
+            '<div class=row><h2>Moyennes par classe</h2><label>Trimestre<select onchange="ui.t=+this.value;draw()">' +
+            opts([1, 2, 3], ui.t) +
+            "</select></label></div><div class=wrap><table><tr><th>Classe</th><th>Niveau</th><th>Effectif</th><th>Moyenne /20</th></tr>" +
+            rows +
+            "</table></div>"
+          );
+        },
+        ens: function () {
+          return (
+            '<h2>Enseignants</h2><div class=row><label>Nom complet<input id=tn placeholder="Prénom Nom"></label><label>Matière<select id=tm>' +
+            opts(
+              [
+                "Mathématiques",
+                "Français",
+                "Physique-Chimie",
+                "SVT",
+                "Histoire-Géo",
+                "Anglais",
+                "EPS",
+                "Philosophie",
+                "Économie",
+              ],
+              "",
+            ) +
+            '</select></label><label>Téléphone<input id=tt type=tel></label></div><div class=row><fieldset style="border:1px solid var(--line);border-radius:6px"><legend class=mut>Classes enseignées</legend>' +
+            CL.map(function (c) {
+              return (
+                '<label style="flex-direction:row;align-items:center;display:inline-flex;margin:2px 10px 2px 0;color:var(--ink)"><input type=checkbox class=tc value="' +
+                c +
+                '" style="min-height:0"> ' +
+                c +
+                "</label>"
+              );
+            }).join("") +
+            '</fieldset><button class=btn onclick="addT()">Ajouter l’enseignant</button></div>' +
+            (S.ens.length
+              ? "<div class=wrap><table><tr><th>Nom</th><th>Matière</th><th>Classes</th><th>Téléphone</th><th></th></tr>" +
+                S.ens
+                  .map(function (t) {
+                    return (
+                      "<tr><td>" +
+                      esc(t.nom) +
+                      "</td><td>" +
+                      t.mat +
+                      "</td><td class=mut>" +
+                      (t.cl.join(", ") || "–") +
+                      "</td><td>" +
+                      esc(t.tel || "–") +
+                      '</td><td><button class="btn ghost" onclick="delT(\'' +
+                      t.id +
+                      "')\">Retirer</button></td></tr>"
+                    );
+                  })
+                  .join("") +
+                "</table></div>"
+              : "<p class=mut>Aucun enseignant enregistré.</p>")
+          );
+        },
+        res: function () {
+          var l = inCl(ui.cl),
+            c = l.map(dec),
+            ad = c.filter(function (x) {
+              return x == "Admis";
+            }).length,
+            rd = c.filter(function (x) {
+              return x == "Redouble";
+            }).length;
+          return (
+            '<h2>Admis et redoublants</h2><div class=row><label>Classe<select onchange="ui.cl=this.value;draw()">' +
+            opts(CL, ui.cl) +
+            '</select></label></div><div class=stats><div class="stat hi"><b class=ok>' +
+            ad +
+            "</b><span>admis</span></div><div class=stat><b class=bad>" +
+            rd +
+            "</b><span>redoublants</span></div><div class=stat><b>" +
+            (ad + rd ? Math.round((ad * 100) / (ad + rd)) + " %" : "–") +
+            "</b><span>taux de réussite</span></div></div>" +
+            (l.length
+              ? "<div class=wrap><table><tr><th>Élève</th><th>T1</th><th>T2</th><th>T3</th><th>Moy. annuelle</th><th>Décision</th></tr>" +
+                l
+                  .map(function (e) {
+                    var a = an(e),
+                      au = a === null ? "–" : a >= 10 ? "Admis" : "Redouble";
+                    return (
+                      "<tr><td>" +
+                      esc(e.nom) +
+                      "</td>" +
+                      [1, 2, 3]
+                        .map(function (t) {
+                          return "<td>" + f(moy(e.id, t)) + "</td>";
+                        })
+                        .join("") +
+                      '<td class="' +
+                      cls(a) +
+                      '">' +
+                      f(a) +
+                      "</td><td><select onchange=\"setD('" +
+                      e.id +
+                      '\',this.value)" aria-label="Décision pour ' +
+                      esc(e.nom) +
+                      '"><option value="">Auto : ' +
+                      au +
+                      "</option><option" +
+                      (S.dec[e.id] == "Admis" ? " selected" : "") +
+                      ">Admis</option><option" +
+                      (S.dec[e.id] == "Redouble" ? " selected" : "") +
+                      ">Redouble</option></select></td></tr>"
+                    );
+                  })
+                  .join("") +
+                "</table></div><p class=mut>La décision automatique est « Admis » si la moyenne annuelle (moyenne des trimestres) est d’au moins 10/20. Vous pouvez la modifier élève par élève.</p>"
+              : "<p class=mut>Aucun élève dans cette classe.</p>")
+          );
+        },
+        adm: function () {
+          var tc = S.paie.reduce(function (a, p) {
+            return a + p.m;
+          }, 0);
+          return (
+            '<h2>Administration</h2><div class=row><label>Nom de l’école<input value="' +
+            esc(S.ecole || "") +
+            '" onchange="setF(\'ecole\',this.value)"></label><label>Année scolaire<input value="' +
+            esc(S.an || "") +
+            '" placeholder="2026-2027" onchange="setF(\'an\',this.value)"></label><label>Directeur / Directrice<input value="' +
+            esc(S.dir || "") +
+            '" onchange="setF(\'dir\',this.value)"></label><label>Poids de la note d’examen<input type=number min=1 step=0.5 value="' +
+            (S.pe || 2) +
+            '" onchange="S.pe=Math.max(1,parseFloat(this.value)||2);save();apiPost(\'/api/config\',{cle:\'pe\',valeur:S.pe})"></label></div><div class=stats><div class="stat hi"><b>' +
+            S.eleves.length +
+            "</b><span>élèves</span></div><div class=stat><b>" +
+            S.ens.length +
+            '</b><span>enseignants</span></div><div class=stat><b style="font-size:1.4rem">' +
+            fc(tc) +
+            '</b><span>scolarité encaissée</span></div></div><h3>Sauvegarde des données</h3><p class=mut>Les données restent dans ce navigateur et sont synchronisées en continu avec le serveur.</p><div class=row><button class=btn onclick="bk()">Copier la sauvegarde</button><button class="btn ghost" style="color:var(--ink)" onclick="rs()">Restaurer depuis la zone ci-dessous</button></div><textarea id=bkt rows=5 placeholder="Collez ici une sauvegarde pour la restaurer" style="width:100%;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:6px;padding:8px"></textarea><div class=row><button class=btn onclick="off()">Télécharger l’application (hors connexion)</button></div><p id=bkm class=mut></p>'
+          );
+        },
+        cartes: function () {
+          var l = inCl(ui.cl);
+          return (
+            '<h2>Cartes scolaires</h2><div class=row><label>Classe<select onchange="ui.cl=this.value;draw()">' +
+            opts(CL, ui.cl) +
+            '</select></label><button class=btn onclick="printB(0)">Imprimer les cartes</button><button class="btn ghost" style="color:var(--ink)" onclick="dk()">Télécharger pour imprimer</button><span id=dlm class=mut></span></div>' +
+            (l.length
+              ? "<div class=cards>" +
+                l
+                  .map(function (e) {
+                    return cs(e, 1);
+                  })
+                  .join("") +
+                "</div>"
+              : "<p class=mut>Aucun élève dans cette classe.</p>") +
+            "<div class=row><span class=mut>Les cartes se remplissent avec la fiche de chaque élève (onglet Élèves). Cliquez sur « Ajouter la photo » sous chaque carte (photo prise avec le téléphone ou importée) : elle est réduite automatiquement.</span></div>"
+          );
+        },
+        mat: function () {
+          var M = MAof(ui.cl);
+          return (
+            '<h2>Matières et coefficients</h2><div class=row><label>Classe<select onchange="ui.cl=this.value;draw()">' +
+            opts(CL, ui.cl) +
+            "</select></label></div><div class=wrap><table><tr><th>Matière</th><th>Coefficient</th><th></th></tr>" +
+            Object.keys(M)
+              .map(function (m, i) {
+                return (
+                  "<tr><td>" +
+                  esc(m) +
+                  '</td><td><input type=number min=0.5 step=0.5 value="' +
+                  M[m] +
+                  '" onchange="mcS(' +
+                  i +
+                  ',this.value)"></td><td><button class="btn ghost" onclick="mcD(' +
+                  i +
+                  ')">Retirer</button></td></tr>'
+                );
+              })
+              .join("") +
+            '</table></div><div class=row><label>Nouvelle matière<input id=mn></label><label>Coefficient<input id=mc type=number min=0.5 step=0.5 value=1></label><button class=btn onclick="mcA()">Ajouter</button></div><p class=mut>Les changements concernent seulement la classe choisie. Retirer une matière garde les notes déjà saisies, mais elles ne comptent plus.</p>'
+          );
+        },
+        edt: function () {
+          var E = ed(ui.cl),
+            Ms = Object.keys(MAof(ui.cl));
+          return (
+            '<h2>Emploi du temps</h2><div class=row><label>Classe<select onchange="ui.cl=this.value;draw()">' +
+            opts(CL, ui.cl) +
+            '</select></label><button class=btn onclick="edA()">Ajouter un créneau</button><button class="btn ghost" style="color:var(--ink)" onclick="edR()">Retirer le dernier créneau</button><button class="btn ghost" style="color:var(--ink)" onclick="edP()">Télécharger pour imprimer</button><span id=dlm class=mut></span></div><div class=wrap><table><tr><th>Horaire</th>' +
+            DJ.map(function (d) {
+              return "<th>" + d + "</th>";
+            }).join("") +
+            "</tr>" +
+            E.sl
+              .map(function (s, i) {
+                return (
+                  '<tr><td><input value="' +
+                  esc(s) +
+                  '" style="width:130px" onchange="edL(' +
+                  i +
+                  ',this.value)" aria-label="Horaire"></td>' +
+                  DJ.map(function (d, j) {
+                    var m = E.c[j + "|" + i] || "";
+                    return (
+                      '<td><select onchange="edC(' +
+                      j +
+                      "," +
+                      i +
+                      ',this.value)"><option value="">–</option>' +
+                      Ms.map(function (x) {
+                        return (
+                          "<option" +
+                          (x == m ? " selected" : "") +
+                          ">" +
+                          x +
+                          "</option>"
+                        );
+                      }).join("") +
+                      '</select><div class=mut style="font-size:.8rem">' +
+                      esc(tn(ui.cl, m)) +
+                      "</div></td>"
+                    );
+                  }).join("") +
+                  "</tr>"
+                );
+              })
+              .join("") +
+            "</table></div><p class=mut>L’enseignant s’affiche seul s’il est affecté à cette classe et à cette matière (onglet Enseignants). Les horaires sont modifiables.</p>"
+          );
+        },
+        eleves: function () {
+          var l = S.eleves.filter(function (e) {
+            return !ui.fcl || e.cl == ui.fcl;
+          });
+          return (
+            ef() +
+            "<div class=row><h2>Liste (" +
+            l.length +
+            ')</h2><label>Filtrer<select onchange="ui.fcl=this.value;draw()"><option value="">Toutes les classes</option>' +
+            opts(CL, ui.fcl) +
+            "</select></label></div>" +
+            (l.length
+              ? "<div class=wrap><table><tr><th>Nom</th><th>Matricule</th><th>Sexe</th><th>Classe</th><th>Parent / tuteur</th><th>Téléphone</th><th></th></tr>" +
+                l
+                  .map(function (e) {
+                    return (
+                      "<tr><td>" +
+                      esc(e.nom) +
+                      "</td><td>" +
+                      esc(e.mat || "–") +
+                      "</td><td>" +
+                      (e.sx || "–") +
+                      "</td><td>" +
+                      e.cl +
+                      "</td><td>" +
+                      esc(e.pa || "–") +
+                      "</td><td>" +
+                      esc(e.tel || "–") +
+                      '</td><td><button class="btn ghost" style="color:var(--pri)" onclick="ui.eid=\'' +
+                      e.id +
+                      '\';draw();window.scrollTo(0,0)">Modifier</button> <button class="btn ghost" onclick="delE(\'' +
+                      e.id +
+                      "')\">Retirer</button></td></tr>"
+                    );
+                  })
+                  .join("") +
+                "</table></div>"
+              : "<p class=mut>Aucun élève dans cette classe. Ajoutez-en avec le formulaire ci-dessus.</p>")
+          );
+        },
+        notes: function () {
+          var l = inCl(ui.cl);
+          var M = MAof(ui.cl),
+            Ms = Object.keys(M);
+          return (
+            '<h2>Saisir les notes</h2><div class=row><label>Classe<select onchange="ui.cl=this.value;draw()">' +
+            opts(CL, ui.cl) +
+            '</select></label><label>Trimestre<select onchange="ui.t=+this.value;draw()">' +
+            opts([1, 2, 3], ui.t) +
+            "</select></label></div>" +
+            (l.length
+              ? "<div class=wrap><table><tr><th rowspan=2>Élève</th>" +
+                Ms.map(function (m) {
+                  return (
+                    '<th colspan=2 style="text-align:center;border-left:1px solid var(--line)">' +
+                    m +
+                    " <span class=mut>(coef. " +
+                    M[m] +
+                    ")</span></th>"
+                  );
+                }).join("") +
+                "<th rowspan=2>Moy. générale</th></tr><tr>" +
+                Ms.map(function () {
+                  return '<th style="border-left:1px solid var(--line)">Classe</th><th>Examen</th>';
+                }).join("") +
+                "</tr>" +
+                l
+                  .map(function (e) {
+                    var g = moy(e.id, ui.t);
+                    return (
+                      "<tr><td>" +
+                      esc(e.nom) +
+                      "</td>" +
+                      Ms.map(function (m) {
+                        var b = e.id + "|" + m + "|" + ui.t;
+                        return (
+                          '<td style="border-left:1px solid var(--line)">' +
+                          ni(e.id, m, "c", S.notes[b + "|c"]) +
+                          "</td><td>" +
+                          ni(e.id, m, "e", S.notes[b + "|e"]) +
+                          "</td>"
+                        );
+                      }).join("") +
+                      '<td id="g' +
+                      e.id +
+                      '" class="' +
+                      cls(g) +
+                      '">' +
+                      f(g) +
+                      "</td></tr>"
+                    );
+                  })
+                  .join("") +
+                "</table></div><p class=mut>Moyenne de la matière = (note de classe + " +
+                (S.pe || 2) +
+                " × note d’examen) ÷ " +
+                (1 + (S.pe || 2)) +
+                ". Le poids se règle dans Administration.</p>"
+              : "<p class=mut>Aucun élève dans cette classe. Inscrivez-en d’abord dans l’onglet Élèves.</p>")
+          );
+        },
+        bulletin: function () {
+          var l = inCl(ui.cl);
+          if (
+            !l.some(function (e) {
+              return e.id == ui.el;
+            })
+          )
+            ui.el = l.length ? l[0].id : "";
+          var e = l.filter(function (x) {
+            return x.id == ui.el;
+          })[0];
+          var h =
+            '<h2>Bulletin</h2><div class=row><label>École<input value="' +
+            esc(S.ecole || "") +
+            '" placeholder="Nom de l’école" onchange="S.ecole=this.value;save()"></label><label>Classe<select onchange="ui.cl=this.value;draw()">' +
+            opts(CL, ui.cl) +
+            '</select></label><label>Élève<select onchange="ui.el=this.value;draw()">' +
+            l
+              .map(function (x) {
+                return (
+                  "<option value=" +
+                  x.id +
+                  (x.id == ui.el ? " selected" : "") +
+                  ">" +
+                  esc(x.nom) +
+                  "</option>"
+                );
+              })
+              .join("") +
+            '</select></label><label>Trimestre<select onchange="ui.t=+this.value;draw()">' +
+            opts([1, 2, 3], ui.t) +
+            "</select></label></div>";
+          if (!e) return h + "<p class=mut>Aucun élève dans cette classe.</p>";
+          return (
+            h +
+            '<div class=row><button class=btn onclick="printB(0)">Imprimer ce bulletin</button><button class=btn onclick="printB(1)">Imprimer toute la classe</button><button class="btn ghost" style="color:var(--ink)" onclick="dl(0)">Télécharger ce bulletin</button><button class="btn ghost" style="color:var(--ink)" onclick="dl(1)">Télécharger la classe</button></div><p id=dlm class=mut></p><div class=one>' +
+            bl(e) +
+            "</div><div class=pall>" +
+            l.map(bl).join("") +
+            "</div>"
+          );
+        },
+        paie: function () {
+          var l = inCl(ui.pcl),
+            ids = l.map(function (e) {
+              return e.id;
+            }),
+            P = S.paie.filter(function (p) {
+              return ids.indexOf(p.el) >= 0;
+            }),
+            sm = function (md) {
+              return P.filter(function (p) {
+                return !md || p.mode == md;
+              }).reduce(function (a, p) {
+                return a + p.m;
+              }, 0);
+            },
+            pd = function (id) {
+              return S.paie
+                .filter(function (p) {
+                  return p.el == id;
+                })
+                .reduce(function (a, p) {
+                  return a + p.m;
+                }, 0);
+            },
+            rest = l.reduce(function (a, e) {
+              return a + Math.max(0, FR[e.cl] - pd(e.id));
+            }, 0);
+          return (
+            rc() +
+            "<h2>Paiements de scolarité (2nd cycle)</h2><p class=mut>Frais de scolarité : " +
+            fc(FR[ui.pcl]) +
+            ' par élève</p><div class=row><label>Classe<select onchange="ui.pcl=this.value;draw()">' +
+            opts(CL.slice(0, 3), ui.pcl) +
+            "</select></label></div>" +
+            '<div class=stats><div class="stat hi"><b style="font-size:1.5rem">' +
+            fc(sm()) +
+            '</b><span>total encaissé</span></div><div class=stat><b style="font-size:1.5rem">' +
+            fc(sm("Espèces")) +
+            '</b><span>en espèces</span></div><div class=stat><b style="font-size:1.5rem">' +
+            fc(sm("Orange Money")) +
+            '</b><span>par Orange Money</span></div><div class=stat><b class=bad style="font-size:1.5rem">' +
+            fc(rest) +
+            "</b><span>reste à percevoir</span></div></div>" +
+            (l.length
+              ? "<div class=row><label>Élève<select id=pe>" +
+                l
+                  .map(function (e) {
+                    return (
+                      "<option value=" + e.id + ">" + esc(e.nom) + "</option>"
+                    );
+                  })
+                  .join("") +
+                '</select></label><label>Montant (FCFA)<input id=pm type=number min=0 step=500></label><label>Mode<select id=pmo><option>Espèces</option><option>Orange Money</option></select></label><label>N° de transaction (Orange Money)<input id=pr></label><button class=btn onclick="addP()">Enregistrer le paiement</button></div>'
+              : "<p class=mut>Aucun élève dans cette classe.</p>") +
+            (l.length
+              ? "<h3>Situation par élève</h3><div class=wrap><table><tr><th>Élève</th><th>Payé</th><th>Reste</th><th>Statut</th></tr>" +
+                l
+                  .map(function (e) {
+                    var p = pd(e.id),
+                      r = FR[e.cl] - p;
+                    return (
+                      "<tr><td>" +
+                      esc(e.nom) +
+                      "</td><td>" +
+                      fc(p) +
+                      '</td><td class="' +
+                      (r > 0 ? "bad" : "ok") +
+                      '">' +
+                      fc(Math.max(0, r)) +
+                      '</td><td class="' +
+                      (r > 0 ? "bad" : "ok") +
+                      '">' +
+                      (r <= 0 ? "Soldé" : p > 0 ? "Partiel" : "Impayé") +
+                      "</td></tr>"
+                    );
+                  })
+                  .join("") +
+                '</table></div><h3 style="margin-top:20px">Paiements enregistrés</h3>'
+              : "") +
+            (P.length
+              ? "<div class=wrap><table><tr><th>Date</th><th>Élève</th><th>Montant</th><th>Mode</th><th>Référence</th><th></th></tr>" +
+                P.slice()
+                  .reverse()
+                  .map(function (p) {
+                    var e = S.eleves.filter(function (x) {
+                      return x.id == p.el;
+                    })[0];
+                    return (
+                      "<tr><td>" +
+                      p.d +
+                      "</td><td>" +
+                      esc(e ? e.nom : "") +
+                      "</td><td>" +
+                      fc(p.m) +
+                      "</td><td>" +
+                      p.mode +
+                      "</td><td class=mut>" +
+                      esc(p.ref || "–") +
+                      '</td><td><button class="btn ghost" style="color:var(--pri)" onclick="rec(\'' +
+                      p.id +
+                      '\')">Reçu</button> <button class="btn ghost" onclick="delP(\'' +
+                      p.id +
+                      "')\">Retirer</button></td></tr>"
+                    );
+                  })
+                  .join("") +
+                "</table></div>"
+              : "<p class=mut>Aucun paiement enregistré pour cette classe.</p>")
+          );
+        },
+        abs: function () {
+          var l = inCl(ui.cl);
+          return (
+            '<h2>Appel du jour</h2><div class=row><label>Date<input type=date value="' +
+            ui.date +
+            '" onchange="ui.date=this.value;draw()"></label><label>Classe<select onchange="ui.cl=this.value;draw()">' +
+            opts(CL, ui.cl) +
+            "</select></label></div>" +
+            (l.length
+              ? '<div class=row><button class=btn onclick="appelOk()">Valider l’appel</button><span class="' +
+                (S.appel[ui.date + "|" + ui.cl] ? "ok" : "mut") +
+                '">' +
+                (S.appel[ui.date + "|" + ui.cl]
+                  ? "Appel fait"
+                  : "Appel non fait") +
+                "</span></div>"
+              : "") +
+            (l.length
+              ? "<div class=wrap><table><tr><th>Élève</th><th>Statut</th><th>Motif</th><th>Absences</th><th>Retards</th></tr>" +
+                l
+                  .map(function (e) {
+                    var r = S.abs[ui.date + "|" + e.id],
+                      t = r ? (r.t == "R" ? "R" : "A") : "",
+                      c = cnt(e.id);
+                    return (
+                      "<tr><td>" +
+                      esc(e.nom) +
+                      "</td><td><select onchange=\"setS('" +
+                      e.id +
+                      '\',this.value)" aria-label="Statut de ' +
+                      esc(e.nom) +
+                      '"><option value="">Présent</option><option value="A"' +
+                      (t == "A" ? " selected" : "") +
+                      '>Absent</option><option value="R"' +
+                      (t == "R" ? " selected" : "") +
+                      ">Retard</option></select></td><td>" +
+                      (t
+                        ? "<select onchange=\"setM('" +
+                          e.id +
+                          "',this.value)\">" +
+                          MO.map(function (m) {
+                            return (
+                              "<option" +
+                              (r && r.m == m ? " selected" : "") +
+                              ">" +
+                              m +
+                              "</option>"
+                            );
+                          }).join("") +
+                          "</select>"
+                        : "–") +
+                      '</td><td class="' +
+                      (c[0] >= 3 ? "bad" : "mut") +
+                      '">' +
+                      c[0] +
+                      "</td><td class=mut>" +
+                      c[1] +
+                      "</td></tr>"
+                    );
+                  })
+                  .join("") +
+                "</table></div>"
+              : "<p class=mut>Aucun élève dans cette classe.</p>")
+          );
+        },
+      };
+      function rec(id) {
+        ui.rid = id;
+        draw();
+        window.scrollTo(0, 0);
+      }
+      function closeR() {
+        ui.rid = "";
+        draw();
+      }
+      function printR() {
+        document.body.className = "pc";
+        try {
+          window.print();
+        } catch (e) {}
+      }
+      function rc() {
+        var p = S.paie.filter(function (x) {
+          return x.id == ui.rid;
+        })[0];
+        if (!p) return "";
+        var e = S.eleves.filter(function (x) {
+          return x.id == p.el;
+        })[0];
+        if (!e) return "";
+        var i = S.paie.indexOf(p),
+          paid = S.paie
+            .filter(function (x, j) {
+              return x.el == p.el && j <= i;
+            })
+            .reduce(function (a, x) {
+              return a + x.m;
+            }, 0);
+        return (
+          '<div class=rcp><div class=row><button class=btn onclick="printR()">Imprimer le reçu</button><button class="btn ghost" style="color:var(--ink)" onclick="dlR()">Télécharger le reçu</button><span id=dlm class=mut></span><button class="btn ghost" style="color:var(--ink)" onclick="closeR()">Fermer</button></div><h3>' +
+          esc(S.ecole || "Établissement scolaire") +
+          "</h3><p><b>Reçu de paiement n° " +
+          ("000" + (i + 1)).slice(-4) +
+          "</b> – " +
+          p.d +
+          "</p><table><tr><td>Élève</td><td>" +
+          esc(e.nom) +
+          " (" +
+          e.cl +
+          ")</td></tr><tr><td>Motif</td><td>Frais de scolarité</td></tr><tr><td>Montant reçu</td><td><b>" +
+          fc(p.m) +
+          "</b></td></tr><tr><td>Mode de paiement</td><td>" +
+          p.mode +
+          (p.ref ? " – transaction " + esc(p.ref) : "") +
+          "</td></tr><tr><td>Total payé à ce jour</td><td>" +
+          fc(paid) +
+          " sur " +
+          fc(FR[e.cl]) +
+          "</td></tr><tr><td>Reste à payer</td><td>" +
+          fc(Math.max(0, FR[e.cl] - paid)) +
+          "</td></tr></table><p>Signature et cachet : ______________</p></div>"
+        );
+      }
+      function fc(x) {
+        return x.toLocaleString("fr-FR") + " FCFA";
+      }
+      function addP() {
+        var m = parseFloat(document.getElementById("pm").value);
+        if (!(m > 0)) {
+          document.getElementById("pm").focus();
+          return;
+        }
+        var p = {
+          id: "p" + Date.now(),
+          el: document.getElementById("pe").value,
+          m: m,
+          mode: document.getElementById("pmo").value,
+          ref: document.getElementById("pr").value.trim(),
+          d: new Date().toISOString().slice(0, 10),
+        };
+        S.paie.push(p);
+        save();
+        draw();
+        apiPost("/api/paiements", p);
+      }
+      function delP(id) {
+        S.paie = S.paie.filter(function (p) {
+          return p.id != id;
+        });
+        save();
+        draw();
+        apiDelete("/api/paiements/" + id);
+      }
+      function printB(a) {
+        document.body.className = a ? "pa" : "";
+        try {
+          window.print();
+        } catch (e) {}
+      }
+      function bl(e) {
+        var l = inCl(e.cl),
+          M = MAof(e.cl),
+          m = moy(e.id, ui.t),
+          all = l
+            .map(function (x) {
+              return { id: x.id, m: moy(x.id, ui.t) };
+            })
+            .filter(function (x) {
+              return x.m !== null;
+            })
+            .sort(function (a, b) {
+              return b.m - a.m;
+            }),
+          r = all
+            .map(function (x) {
+              return x.id;
+            })
+            .indexOf(e.id);
+        return (
+          "<div class=bl><div class=pr><h3>" +
+          esc(S.ecole || "Établissement scolaire") +
+          "</h3><p>Bulletin de notes – Trimestre " +
+          ui.t +
+          (S.an ? " – Année scolaire " + esc(S.an) : "") +
+          "</p><p><b>" +
+          esc(e.nom) +
+          "</b> – " +
+          e.cl +
+          " (" +
+          cyc(e.cl) +
+          ")" +
+          (e.mat ? " – Matricule " + esc(e.mat) : "") +
+          (e.dn
+            ? " – Né(e) le " + fd(e.dn) + (e.ln ? " à " + esc(e.ln) : "")
+            : "") +
+          "</p></div><div class=wrap><table><tr><th>Matière</th><th>Coef.</th><th>Note de classe</th><th>Note d’examen</th><th>Moyenne /20</th></tr>" +
+          Object.keys(M)
+            .map(function (k) {
+              var b = e.id + "|" + k + "|" + ui.t,
+                c = S.notes[b + "|c"],
+                x = S.notes[b + "|e"],
+                v = nm(e.id, k, ui.t);
+              return (
+                "<tr><td>" +
+                k +
+                "</td><td>" +
+                M[k] +
+                "</td><td>" +
+                (c === undefined ? "–" : f(c)) +
+                "</td><td>" +
+                (x === undefined ? "–" : f(x)) +
+                '</td><td class="' +
+                (v === null ? "mut" : v >= 10 ? "ok" : "bad") +
+                '">' +
+                (v === null ? "–" : f(v)) +
+                "</td></tr>"
+              );
+            })
+            .join("") +
+          '</table></div><div class=stats><div class="stat hi"><b class="' +
+          cls(m) +
+          '">' +
+          f(m) +
+          "</b><span>moyenne générale /20</span></div><div class=stat><b>" +
+          (r >= 0 ? r + 1 + "e" : "–") +
+          "</b><span>rang sur " +
+          all.length +
+          ' classés</span></div><div class=stat><b style="font-size:1.3rem">' +
+          (mention(m) || "–") +
+          '</b><span>appréciation</span></div><div class=stat><b style="font-size:1.3rem">' +
+          cnt(e.id).join(" / ") +
+          "</b><span>absences / retards</span></div></div><div class=pr><p>Le directeur : " +
+          (S.dir ? esc(S.dir) : "______________") +
+          " &nbsp; Le parent : ______________</p></div></div>"
+        );
+      }
+      function appelOk() {
+        S.appel[ui.date + "|" + ui.cl] = 1;
+        save();
+        draw();
+        apiPost("/api/appels", { date: ui.date, classe: ui.cl, statut: 1 });
+      }
+      function addT() {
+        var n = document.getElementById("tn").value.trim();
+        if (!n) {
+          document.getElementById("tn").focus();
+          return;
+        }
+        var t = {
+          id: "t" + Date.now(),
+          nom: n,
+          mat: document.getElementById("tm").value,
+          tel: document.getElementById("tt").value.trim(),
+          cl: [].slice
+            .call(document.querySelectorAll(".tc:checked"))
+            .map(function (x) {
+              return x.value;
+            }),
+        };
+        S.ens.push(t);
+        save();
+        draw();
+        apiPost("/api/enseignants", t);
+      }
+      function delT(id) {
+        S.ens = S.ens.filter(function (t) {
+          return t.id != id;
+        });
+        save();
+        draw();
+        apiDelete("/api/enseignants/" + id);
+      }
+      function pres() {
+        var tot = 0,
+          ab = 0,
+          rows = CL.map(function (c) {
+            var l = inCl(c),
+              a = l.filter(function (e) {
+                var r = S.abs[ui.date + "|" + e.id];
+                return r && r.t != "R";
+              }).length,
+              ok = S.appel[ui.date + "|" + c];
+            if (ok) {
+              tot += l.length;
+              ab += a;
+            }
+            return (
+              "<tr><td>" +
+              c +
+              "</td><td>" +
+              l.length +
+              "</td><td>" +
+              (ok ? l.length - a : "–") +
+              '</td><td class="' +
+              (a ? "bad" : "mut") +
+              '">' +
+              (ok ? a : "–") +
+              '</td><td class="' +
+              (ok ? "ok" : "mut") +
+              '">' +
+              (ok ? "Appel fait" : "Non fait") +
+              "</td></tr>"
+            );
+          }).join("");
+        return (
+          '<div class=row><h2>Présence du jour</h2><label>Date<input type=date value="' +
+          ui.date +
+          '" onchange="ui.date=this.value;draw()"></label></div><div class=stats><div class="stat hi"><b class=ok>' +
+          (tot - ab) +
+          "</b><span>élèves présents</span></div><div class=stat><b class=bad>" +
+          ab +
+          "</b><span>élèves absents</span></div><div class=stat><b>" +
+          (tot ? Math.round(((tot - ab) * 100) / tot) + " %" : "–") +
+          "</b><span>taux de présence</span></div></div><div class=wrap><table><tr><th>Classe</th><th>Effectif</th><th>Présents</th><th>Absents</th><th>Appel</th></tr>" +
+          rows +
+          "</table></div><p class=mut>Seules les classes dont l’appel est fait (onglet Absences) sont comptées.</p>"
+        );
+      }
+      function an(e) {
+        var m = [1, 2, 3]
+          .map(function (t) {
+            return moy(e.id, t);
+          })
+          .filter(function (x) {
+            return x !== null;
+          });
+        return m.length
+          ? m.reduce(function (a, b) {
+              return a + b;
+            }) / m.length
+          : null;
+      }
+      function dec(e) {
+        var d = S.dec[e.id];
+        if (d) return d;
+        var a = an(e);
+        return a === null ? "–" : a >= 10 ? "Admis" : "Redouble";
+      }
+      function setD(id, v) {
+        if (v) S.dec[id] = v;
+        else delete S.dec[id];
+        save();
+        draw();
+        apiPost("/api/eleves/" + id + "/decision", { decision: v });
+      }
+      function setF(k, v) {
+        S[k] = v.trim();
+        save();
+        apiPost("/api/config", { cle: k, valeur: S[k] });
+      }
+      function bk() {
+        var t = document.getElementById("bkt"),
+          m = document.getElementById("bkm"),
+          ok = false;
+        t.value = JSON.stringify(S);
+        t.select();
+        try {
+          ok = document.execCommand("copy");
+        } catch (e) {}
+        try {
+          navigator.clipboard.writeText(t.value);
+          ok = true;
+        } catch (e) {}
+        m.textContent = ok
+          ? "Sauvegarde copiée."
+          : "Sélectionnez le texte ci-dessus et copiez-le (Ctrl+C).";
+      }
+      function rs() {
+        var m = document.getElementById("bkm");
+        try {
+          var d = JSON.parse(document.getElementById("bkt").value);
+          if (!d.eleves) throw 0;
+          S = d;
+          S.paie = S.paie || [];
+          S.ens = S.ens || [];
+          S.appel = S.appel || {};
+          S.dec = S.dec || {};
+          save();
+          draw();
+        } catch (e) {
+          m.textContent = "Sauvegarde invalide : rien n’a été modifié.";
+        }
+      }
+      function downloadFallback(filename, data, msgEl, successMsg) {
+        try {
+          var blob = new Blob([data], { type: "text/html;charset=utf-8" });
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(function () {
+            URL.revokeObjectURL(url);
+          }, 1500);
+          if (msgEl) {
+            msgEl.textContent =
+              successMsg || "Fichier téléchargé : ouvrez-le, il s’imprime automatiquement.";
+          }
+        } catch (e) {
+          if (msgEl) msgEl.textContent = "Téléchargement impossible.";
+        }
+      }
+      function saveHtml(n, b, m) {
+        var h =
+          '<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' +
+          n +
+          "</title><style>" +
+          document.querySelector("style").textContent +
+          '\n:root:not([data-theme="light"]),:root{--bg:#fff;--card:#fff;--ink:#000;--mut:#444;--line:#999;--ok:#000;--bad:#000;color-scheme:light}.pr{display:block}main{max-width:none}.rcp{border:0}.wrap td:first-child,.wrap th:first-child{position:static}</style></head><body>' +
+          b +
+          "<script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script></body></html>";
+        if (window.claude && window.claude.use) {
+          window.claude
+            .use("downloads")
+            .then(function (d) {
+              if (!d) throw 0;
+              return d.save({ filename: n, data: h });
+            })
+            .then(
+              function () {
+                if (m)
+                  m.textContent =
+                    "Fichier enregistré : ouvrez-le, il s’imprime automatiquement.";
+              },
+              function (x) {
+                if (x && x.code == "declined") {
+                  if (m) m.textContent = "";
+                } else {
+                  downloadFallback(n, h, m);
+                }
+              },
+            )
+            .catch(function () {
+              downloadFallback(n, h, m);
+            });
+        } else {
+          downloadFallback(n, h, m);
+        }
+      }
+      function dl(all) {
+        var m = document.getElementById("dlm"),
+          l = inCl(ui.cl),
+          e = l.filter(function (x) {
+            return x.id == ui.el;
+          })[0],
+          L = all ? l : e ? [e] : [];
+        if (!L.length) return;
+        saveHtml(
+          "bulletins-" + ui.cl.replace(/\s+/g, "-") + "-T" + ui.t + ".html",
+          "<main>" + L.map(bl).join("") + "</main>",
+          m,
+        );
+      }
+      function dlR() {
+        var m = document.getElementById("dlm"),
+          r = rc().replace(/<div class=row>.*?<\/div>/, "");
+        if (!r) return;
+        saveHtml("recu-" + ui.rid + ".html", "<main>" + r + "</main>", m);
+      }
+      function fd(s) {
+        return s ? s.split("-").reverse().join("/") : "";
+      }
+      function fx() {
+        return (
+          S.eleves.filter(function (e) {
+            return e.id == ui.eid;
+          })[0] || {}
+        );
+      }
+      function ef() {
+        var x = fx();
+        return (
+          "<h2>" +
+          (x.id ? "Modifier la fiche de l’élève" : "Inscrire un élève") +
+          '</h2><div class=row><label>Nom complet<input id=nn value="' +
+          esc(x.nom || "") +
+          '"></label><label>Matricule<input id=nm2 value="' +
+          esc(x.mat || "") +
+          '"></label><label>Sexe<select id=ns><option value="">–</option><option value="F"' +
+          (x.sx == "F" ? " selected" : "") +
+          '>Fille</option><option value="M"' +
+          (x.sx == "M" ? " selected" : "") +
+          '>Garçon</option></select></label><label>Date de naissance<input id=nd type=date value="' +
+          esc(x.dn || "") +
+          '"></label><label>Lieu de naissance<input id=nl value="' +
+          esc(x.ln || "") +
+          '"></label></div><div class=row><label>Classe<select id=nc>' +
+          opts(CL, x.cl || ui.cl) +
+          '</select></label><label>Parent ou tuteur<input id=np value="' +
+          esc(x.pa || "") +
+          '"></label><label>Téléphone du parent<input id=nt type=tel value="' +
+          esc(x.tel || "") +
+          '"></label><label>Adresse<input id=na value="' +
+          esc(x.ad || "") +
+          '"></label><button class=btn onclick="addE()">' +
+          (x.id ? "Enregistrer" : "Ajouter l’élève") +
+          "</button>" +
+          (x.id
+            ? '<button class="btn ghost" style="color:var(--ink)" onclick="ui.eid=\'\';draw()">Annuler</button>'
+            : "") +
+          "</div>"
+        );
+      }
+      function addE() {
+        var g = function (i) {
+            return document.getElementById(i).value.trim();
+          },
+          n = g("nn");
+        if (!n) {
+          document.getElementById("nn").focus();
+          return;
+        }
+        var o = {
+            nom: n,
+            mat: g("nm2"),
+            sx: g("ns"),
+            dn: g("nd"),
+            ln: g("nl"),
+            cl: g("nc"),
+            pa: g("np"),
+            tel: g("nt"),
+            ad: g("na"),
+          },
+          x = fx();
+        if (x.id) {
+          Object.assign(x, o);
+          o.id = x.id;
+        } else {
+          o.id = "e" + Date.now();
+          S.eleves.push(o);
+        }
+        ui.eid = "";
+        ui.cl = o.cl;
+        save();
+        draw();
+        apiPost("/api/eleves", o);
+      }
+      function cs(e, ed) {
+        return (
+          "<div class=cs><h4>" +
+          esc(S.ecole || "Établissement scolaire") +
+          '</h4><p style="text-align:center;margin:0 0 6px"><b>CARTE SCOLAIRE</b>' +
+          (S.an ? " – " + esc(S.an) : "") +
+          "</p>" +
+          (e.ph
+            ? '<img class=ph src="' + e.ph + '" alt="">'
+            : "<div class=ph>Photo</div>") +
+          "<div><b>" +
+          esc(e.nom) +
+          "</b></div><div>Matricule : " +
+          esc(e.mat || "–") +
+          "</div><div>Classe : " +
+          e.cl +
+          (e.sx ? " – " + (e.sx == "F" ? "Fille" : "Garçon") : "") +
+          "</div><div>Né(e) le " +
+          (fd(e.dn) || "–") +
+          " à " +
+          esc(e.ln || "–") +
+          "</div><div>Parent : " +
+          esc(e.pa || "–") +
+          " – " +
+          esc(e.tel || "–") +
+          '</div><div style="clear:both;margin-top:6px;font-size:.75rem">Le directeur : ' +
+          esc(S.dir || "") +
+          "</div>" +
+          (ed
+            ? '<div class=row style="clear:both;margin:6px 0 0"><label class="btn ghost" style="color:var(--pri);cursor:pointer">' +
+              (e.ph ? "Changer la photo" : "Ajouter la photo") +
+              '<input type=file accept="image/*" hidden onchange="ph(\'' +
+              e.id +
+              "',this)\"></label></div>"
+            : "") +
+          "</div>"
+        );
+      }
+      function ph(id, i) {
+        var f = i.files[0];
+        if (!f) return;
+        var r = new FileReader();
+        r.onload = function () {
+          var im = new Image();
+          im.onload = function () {
+            var w = 120,
+              h = 150,
+              c = document.createElement("canvas");
+            c.width = w;
+            c.height = h;
+            var s = Math.max(w / im.width, h / im.height),
+              sw = w / s,
+              sh = h / s;
+            c.getContext("2d").drawImage(
+              im,
+              (im.width - sw) / 2,
+              (im.height - sh) / 2,
+              sw,
+              sh,
+              0,
+              0,
+              w,
+              h,
+            );
+            var e = S.eleves.filter(function (x) {
+              return x.id == id;
+            })[0];
+            if (e) {
+              e.ph = c.toDataURL("image/jpeg", 0.7);
+              save();
+              draw();
+              apiPost("/api/eleves/" + id + "/photo", { photo: e.ph });
+            }
+          };
+          im.src = r.result;
+        };
+        r.readAsDataURL(f);
+      }
+      function dk() {
+        saveHtml(
+          "cartes-" + ui.cl.replace(/\s+/g, "-") + ".html",
+          "<main><div class=cards>" +
+            inCl(ui.cl)
+              .map(function (e) {
+                return cs(e);
+              })
+              .join("") +
+            "</div></main>",
+          document.getElementById("dlm"),
+        );
+      }
+      function sxs() {
+        var T = [0, 0, 0],
+          r = CL.map(function (c) {
+            var l = inCl(c),
+              a = l.filter(function (x) {
+                return x.sx == "F";
+              }).length,
+              b = l.filter(function (x) {
+                return x.sx == "M";
+              }).length;
+            T[0] += a;
+            T[1] += b;
+            T[2] += l.length;
+            return (
+              "<tr><td>" +
+              c +
+              "</td><td>" +
+              a +
+              "</td><td>" +
+              b +
+              "</td><td>" +
+              l.length +
+              "</td></tr>"
+            );
+          }).join("");
+        return (
+          '<h2 style="margin-top:24px">Statistiques par sexe</h2><div class=wrap><table><tr><th>Classe</th><th>Filles</th><th>Garçons</th><th>Total</th></tr>' +
+          r +
+          "<tr><td><b>Toute l’école</b></td><td><b>" +
+          T[0] +
+          "</b></td><td><b>" +
+          T[1] +
+          "</b></td><td><b>" +
+          T[2] +
+          "</b></td></tr></table></div>" +
+          (T[2]
+            ? "<p class=mut>" +
+              Math.round((T[0] * 100) / T[2]) +
+              " % de filles. Les élèves dont le sexe n’est pas renseigné comptent seulement dans le total.</p>"
+            : "")
+        );
+      }
+      function mcw() {
+        if (!S.mc) S.mc = {};
+        if (!S.mc[ui.cl]) S.mc[ui.cl] = JSON.parse(JSON.stringify(MAof(ui.cl)));
+        return S.mc[ui.cl];
+      }
+      function mcS(i, v) {
+        var M = mcw();
+        var nom = Object.keys(M)[i];
+        var coef = Math.max(0.5, parseFloat(v) || 1);
+        M[nom] = coef;
+        save();
+        apiPost("/api/matieres", { classe: ui.cl, nom: nom, coef: coef });
+      }
+      function mcD(i) {
+        var M = mcw();
+        var nom = Object.keys(M)[i];
+        delete M[nom];
+        save();
+        draw();
+        apiDelete("/api/matieres/" + encodeURIComponent(ui.cl) + "/" + encodeURIComponent(nom));
+      }
+      function mcA() {
+        var n = document.getElementById("mn").value.trim();
+        if (!n) return;
+        var coef = Math.max(
+          0.5,
+          parseFloat(document.getElementById("mc").value) || 1,
+        );
+        mcw()[n] = coef;
+        save();
+        draw();
+        apiPost("/api/matieres", { classe: ui.cl, nom: n, coef: coef });
+      }
+      function ed(c) {
+        if (!S.edt) S.edt = {};
+        if (!S.edt[c])
+          S.edt[c] = {
+            sl: [
+              "07h30 - 08h30",
+              "08h30 - 09h30",
+              "09h30 - 10h30",
+              "10h45 - 11h45",
+              "11h45 - 12h45",
+            ],
+            c: {},
+          };
+        return S.edt[c];
+      }
+      function tn(c, m) {
+        var t = S.ens.filter(function (t) {
+          return t.mat == m && t.cl.indexOf(c) >= 0;
+        })[0];
+        return t ? t.nom : "";
+      }
+      function edL(i, v) {
+        ed(ui.cl).sl[i] = v;
+        save();
+        syncEdt(ui.cl);
+      }
+      function edC(j, i, v) {
+        var E = ed(ui.cl);
+        if (v) E.c[j + "|" + i] = v;
+        else delete E.c[j + "|" + i];
+        save();
+        draw();
+        syncEdt(ui.cl);
+      }
+      function edA() {
+        ed(ui.cl).sl.push("Nouveau créneau");
+        save();
+        draw();
+        syncEdt(ui.cl);
+      }
+      function edR() {
+        var E = ed(ui.cl),
+          i = E.sl.length - 1;
+        if (i < 1) return;
+        E.sl.pop();
+        DJ.forEach(function (d, j) {
+          delete E.c[j + "|" + i];
+        });
+        save();
+        draw();
+        syncEdt(ui.cl);
+      }
+      function edP() {
+        var E = ed(ui.cl),
+          c = ui.cl,
+          h =
+            '<main><div class=pr style="display:block"><h3>' +
+            esc(S.ecole || "Établissement scolaire") +
+            "</h3><p>Emploi du temps – " +
+            c +
+            (S.an ? " – " + esc(S.an) : "") +
+            "</p></div><div class=wrap><table><tr><th>Horaire</th>" +
+            DJ.map(function (d) {
+              return "<th>" + d + "</th>";
+            }).join("") +
+            "</tr>" +
+            E.sl
+              .map(function (s, i) {
+                return (
+                  "<tr><td>" +
+                  esc(s) +
+                  "</td>" +
+                  DJ.map(function (d, j) {
+                    var m = E.c[j + "|" + i] || "";
+                    return (
+                      "<td>" +
+                      m +
+                      (m && tn(c, m)
+                        ? "<br><span class=mut>" + esc(tn(c, m)) + "</span>"
+                        : "") +
+                      "</td>"
+                    );
+                  }).join("") +
+                  "</tr>"
+                );
+              })
+              .join("") +
+            "</table></div></main>";
+        saveHtml(
+          "emploi-du-temps-" + c.replace(/\s+/g, "-") + ".html",
+          h,
+          document.getElementById("dlm"),
+        );
+      }
+      function off() {
+        var m = document.getElementById("bkm");
+        var c = document.documentElement.cloneNode(true);
+        c.querySelectorAll("script").forEach(function (s) {
+          if (s.textContent.indexOf("var CL=") < 0) s.remove();
+        });
+        var mainEl = c.querySelector("#main");
+        if (mainEl) mainEl.innerHTML = "";
+        var navEl = c.querySelector("#nav");
+        if (navEl) navEl.innerHTML = "";
+        var data = "<!doctype html>" + c.outerHTML;
+        var msg =
+          "Application enregistrée. Ouvrez ce fichier, même sans internet, puis restaurez vos données avec la sauvegarde.";
+        if (window.claude && window.claude.use) {
+          window.claude
+            .use("downloads")
+            .then(function (d) {
+              if (!d) throw 0;
+              return d.save({
+                filename: "gestion-scolaire.html",
+                data: data,
+              });
+            })
+            .then(
+              function () {
+                if (m) m.textContent = msg;
+              },
+              function (x) {
+                if (x && x.code == "declined") {
+                  if (m) m.textContent = "";
+                } else {
+                  downloadFallback("gestion-scolaire.html", data, m, msg);
+                }
+              },
+            )
+            .catch(function () {
+              downloadFallback("gestion-scolaire.html", data, m, msg);
+            });
+        } else {
+          downloadFallback("gestion-scolaire.html", data, m, msg);
+        }
+      }
+      function delE(id) {
+        S.eleves = S.eleves.filter(function (e) {
+          return e.id != id;
+        });
+        save();
+        draw();
+        apiDelete("/api/eleves/" + id);
+      }
+      function nm(id, m, t) {
+        var c = S.notes[id + "|" + m + "|" + t + "|c"],
+          x = S.notes[id + "|" + m + "|" + t + "|e"],
+          p = S.pe || 2;
+        if (c === undefined && x === undefined) return null;
+        if (x === undefined) return c;
+        if (c === undefined) return x;
+        return (c + p * x) / (1 + p);
+      }
+      function ni(id, m, k, v) {
+        return (
+          '<input type=number min=0 max=20 step=0.25 value="' +
+          (v === undefined ? "" : v) +
+          '" onchange="setN(\'' +
+          id +
+          "','" +
+          m +
+          "','" +
+          k +
+          '\',this)" aria-label="' +
+          m +
+          " – note " +
+          (k == "c" ? "de classe" : "d’examen") +
+          '">'
+        );
+      }
+      function setN(id, m, x, i) {
+        var k = id + "|" + m + "|" + ui.t + "|" + x,
+          v = parseFloat(i.value);
+        if (isNaN(v)) {
+          delete S.notes[k];
+          v = null;
+        } else {
+          v = Math.max(0, Math.min(20, v));
+          S.notes[k] = v;
+          i.value = v;
+        }
+        save();
+        apiPost("/api/notes", {
+          eleveId: id,
+          matiere: m,
+          trimestre: ui.t,
+          typeNote: x,
+          note: v,
+        });
+        var c = document.getElementById("g" + id),
+          g = moy(id, ui.t);
+        if (c) {
+          c.textContent = f(g);
+          c.className = cls(g);
+        }
+      }
+      var MO = [
+          "Sans motif connu",
+          "Maladie",
+          "Deuil",
+          "Raison familiale",
+          "Transport",
+          "Voyage",
+          "Autre",
+        ],
+        DJ = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+      function setS(id, v) {
+        var k = ui.date + "|" + id;
+        var motif = (S.abs[k] && S.abs[k].m) || MO[0];
+        if (v) S.abs[k] = { t: v, m: motif };
+        else delete S.abs[k];
+        S.appel[ui.date + "|" + ui.cl] = 1;
+        save();
+        draw();
+        apiPost("/api/absences", {
+          date: ui.date,
+          eleveId: id,
+          type: v,
+          motif: motif,
+        });
+        apiPost("/api/appels", {
+          date: ui.date,
+          classe: ui.cl,
+          statut: 1,
+        });
+      }
+      function setM(id, v) {
+        var k = ui.date + "|" + id;
+        if (S.abs[k]) {
+          S.abs[k] = { t: S.abs[k].t || "A", m: v };
+          save();
+          apiPost("/api/absences", {
+            date: ui.date,
+            eleveId: id,
+            type: S.abs[k].t || "A",
+            motif: v,
+          });
+        }
+      }
+      function cnt(id) {
+        var a = 0,
+          r = 0;
+        for (var k in S.abs)
+          if (k.split("|")[1] == id) {
+            if (S.abs[k].t == "R") r++;
+            else a++;
+          }
+        return [a, r];
+      }
+      function syncWithDatabase(forceUser) {
+        var msg = document.getElementById("sqlsyncmsg");
+        if (msg) msg.textContent = "Synchronisation en cours avec la base SQL relationnelle...";
+        fetch("/api/data")
+          .then(function (res) {
+            return res.json();
+          })
+          .then(function (resp) {
+            if (resp && resp.ok && resp.data) {
+              var d = resp.data;
+              if (d.eleves && d.eleves.length > 0) {
+                S = d;
+                save();
+                draw();
+                if (msg)
+                  msg.textContent =
+                    "Données synchronisées avec succès depuis la base SQL.";
+              } else {
+                apiPost("/api/sync", S).then(function () {
+                  if (msg)
+                    msg.textContent =
+                      "Données locales injectées et synchronisées dans la base SQL.";
+                });
+              }
+            }
+          })
+          .catch(function (err) {
+            if (msg)
+              msg.textContent =
+                "Erreur de communication avec la base SQL : " + err.message;
+          });
+      }
+
+      function testMySqlConn() {
+        var h = document.getElementById("myh").value.trim();
+        var p = document.getElementById("myp").value.trim();
+        var u = document.getElementById("myu").value.trim();
+        var pw = document.getElementById("mypw").value;
+        var db = document.getElementById("mydb").value.trim();
+        var resEl = document.getElementById("mytestres");
+        resEl.textContent = "Test de connexion MySQL en cours...";
+        fetch("/api/database/test-mysql", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            host: h,
+            port: p,
+            user: u,
+            password: pw,
+            database: db,
+          }),
+        })
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (data) {
+            if (data.ok) {
+              resEl.className = "ok";
+              resEl.textContent = "✅ " + data.message;
+            } else {
+              resEl.className = "bad";
+              resEl.textContent =
+                "❌ Échec de connexion : " +
+                (data.error || "Serveur MySQL injoignable");
+            }
+          })
+          .catch(function (err) {
+            resEl.className = "bad";
+            resEl.textContent = "❌ Erreur réseau : " + err.message;
+          });
+      }
+
+      function initDatabaseSync() {
+        fetch("/api/data")
+          .then(function (res) {
+            return res.json();
+          })
+          .then(function (resp) {
+            if (resp && resp.ok && resp.data) {
+              var d = resp.data;
+              if (d.eleves && d.eleves.length > 0) {
+                S = d;
+                save();
+                draw();
+              } else if (S && S.eleves && S.eleves.length > 0) {
+                apiPost("/api/sync", S);
+              }
+            }
+          })
+          .catch(function (err) {
+            console.warn("Base SQL hors-ligne temporaire, mode local:", err);
+          });
+      }
+
+      draw();
+      initDatabaseSync();
+    </script>
+  </body>
+</html>
