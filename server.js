@@ -5,6 +5,9 @@ import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 import {
   initDatabase,
+  connectMySQLPool,
+  saveMySQLConfigFile,
+  loadSavedConfig,
   getAppState,
   saveEleve,
   updateElevePhoto,
@@ -61,7 +64,91 @@ app.get('/api/data', async (req, res) => {
   }
 });
 
-// 3. Bulk sync
+// 2b. Database saved config
+app.get('/api/database/config', (req, res) => {
+  const saved = loadSavedConfig();
+  res.json({
+    ok: true,
+    config: {
+      host: saved?.host || process.env.MYSQL_HOST || 'localhost',
+      port: saved?.port || parseInt(process.env.MYSQL_PORT) || 3306,
+      user: saved?.user || process.env.MYSQL_USER || 'root',
+      database: saved?.database || process.env.MYSQL_DATABASE || 'gestion_scolaire',
+      ssl: saved?.ssl ?? (process.env.MYSQL_SSL === 'true'),
+      hasPassword: Boolean(saved?.password || process.env.MYSQL_PASSWORD),
+    },
+  });
+});
+
+// 3. Connect to a real MySQL database dynamically
+app.post('/api/database/connect-mysql', async (req, res) => {
+  const { host, port, user, password, database, ssl } = req.body;
+  if (!host || !user || !database) {
+    return res.status(400).json({ ok: false, error: 'Veuillez renseigner l’hôte, l’utilisateur et le nom de la base de données.' });
+  }
+
+  const result = await connectMySQLPool({
+    host: host.trim(),
+    port: parseInt(port) || 3306,
+    user: user.trim(),
+    password: password || '',
+    database: database.trim(),
+    ssl: ssl === true || ssl === 'true',
+  });
+
+  if (result.ok) {
+    saveMySQLConfigFile({
+      host: host.trim(),
+      port: parseInt(port) || 3306,
+      user: user.trim(),
+      password: password || '',
+      database: database.trim(),
+      ssl: ssl === true || ssl === 'true',
+    });
+    const state = await getAppState();
+    res.json({
+      ok: true,
+      message: `Connecté avec succès à votre base MySQL "${database}" sur ${host} ! Les 9 tables sont vérifiées et prêtes.`,
+      data: state,
+    });
+  } else {
+    res.json({ ok: false, error: result.error });
+  }
+});
+
+// 4. Test MySQL connection
+app.post('/api/database/test-mysql', async (req, res) => {
+  const { host, port, user, password, database, ssl } = req.body;
+  const p = parseInt(port) || 3306;
+  const h = (host || 'localhost').trim();
+  const u = (user || 'root').trim();
+  try {
+    const connection = await mysql.createConnection({
+      host: h,
+      port: p,
+      user: u,
+      password: password || '',
+      database: database ? database.trim() : undefined,
+      ssl: ssl === true || ssl === 'true' ? { rejectUnauthorized: false } : undefined,
+      connectTimeout: 6000,
+    });
+    await connection.ping();
+    await connection.end();
+    res.json({ ok: true, message: `Connexion MySQL réussie avec succès sur ${h}:${p} !` });
+  } catch (err) {
+    let friendly = err.message;
+    if (err.code === 'ECONNREFUSED') {
+      friendly = `Connexion refusée sur ${h}:${p}. Assurez-vous que le serveur MySQL est démarré et autorise les connexions réseau.`;
+    } else if (err.code === 'ER_ACCESS_DENIED_ERROR') {
+      friendly = `Accès refusé pour '${u}'. Vérifiez le nom d'utilisateur et le mot de passe.`;
+    } else if (err.code === 'ENOTFOUND') {
+      friendly = `Hôte '${h}' introuvable.`;
+    }
+    res.json({ ok: false, error: friendly, code: err.code });
+  }
+});
+
+// 5. Bulk sync
 app.post('/api/sync', async (req, res) => {
   try {
     await bulkSync(req.body);
@@ -72,7 +159,7 @@ app.post('/api/sync', async (req, res) => {
   }
 });
 
-// 4. Élèves
+// 6. Élèves
 app.post('/api/eleves', async (req, res) => {
   try {
     await saveEleve(req.body);
@@ -109,7 +196,7 @@ app.delete('/api/eleves/:id', async (req, res) => {
   }
 });
 
-// 5. Enseignants
+// 7. Enseignants
 app.post('/api/enseignants', async (req, res) => {
   try {
     await saveEnseignant(req.body);
@@ -128,7 +215,7 @@ app.delete('/api/enseignants/:id', async (req, res) => {
   }
 });
 
-// 6. Matières
+// 8. Matières
 app.post('/api/matieres', async (req, res) => {
   try {
     const { classe, nom, coef } = req.body;
@@ -148,7 +235,7 @@ app.delete('/api/matieres/:classe/:nom', async (req, res) => {
   }
 });
 
-// 7. Notes
+// 9. Notes
 app.post('/api/notes', async (req, res) => {
   try {
     const { eleveId, matiere, trimestre, typeNote, note } = req.body;
@@ -159,7 +246,7 @@ app.post('/api/notes', async (req, res) => {
   }
 });
 
-// 8. Paiements
+// 10. Paiements
 app.post('/api/paiements', async (req, res) => {
   try {
     await savePaiement(req.body);
@@ -178,7 +265,7 @@ app.delete('/api/paiements/:id', async (req, res) => {
   }
 });
 
-// 9. Absences et Appels
+// 11. Absences et Appels
 app.post('/api/absences', async (req, res) => {
   try {
     const { date, eleveId, type, motif } = req.body;
@@ -199,7 +286,7 @@ app.post('/api/appels', async (req, res) => {
   }
 });
 
-// 10. Emploi du temps
+// 12. Emploi du temps
 app.post('/api/edt', async (req, res) => {
   try {
     const { classe, creneaux, grille } = req.body;
@@ -210,7 +297,7 @@ app.post('/api/edt', async (req, res) => {
   }
 });
 
-// 11. Configuration
+// 13. Configuration
 app.post('/api/config', async (req, res) => {
   try {
     const { cle, valeur } = req.body;
@@ -218,26 +305,6 @@ app.post('/api/config', async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
-// 12. Test de connexion à un serveur MySQL
-app.post('/api/database/test-mysql', async (req, res) => {
-  const { host, port, user, password, database } = req.body;
-  try {
-    const connection = await mysql.createConnection({
-      host: host || 'localhost',
-      port: parseInt(port) || 3306,
-      user: user || 'root',
-      password: password || '',
-      database: database || undefined,
-      connectTimeout: 4000,
-    });
-    await connection.ping();
-    await connection.end();
-    res.json({ ok: true, message: 'Connexion MySQL réussie !' });
-  } catch (err) {
-    res.json({ ok: false, error: err.message });
   }
 });
 

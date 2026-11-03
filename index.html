@@ -603,6 +603,9 @@
       function go(t) {
         tab = t;
         draw();
+        if (t == "adm") {
+          loadDbStatusAndConfig();
+        }
       }
       function draw() {
         document.getElementById("nav").innerHTML = TABS.map(function (t) {
@@ -808,7 +811,29 @@
             S.ens.length +
             '</b><span>enseignants</span></div><div class=stat><b style="font-size:1.4rem">' +
             fc(tc) +
-            '</b><span>scolarité encaissée</span></div></div><h3>Sauvegarde des données</h3><p class=mut>Les données restent dans ce navigateur et sont synchronisées en continu avec le serveur.</p><div class=row><button class=btn onclick="bk()">Copier la sauvegarde</button><button class="btn ghost" style="color:var(--ink)" onclick="rs()">Restaurer depuis la zone ci-dessous</button></div><textarea id=bkt rows=5 placeholder="Collez ici une sauvegarde pour la restaurer" style="width:100%;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:6px;padding:8px"></textarea><div class=row><button class=btn onclick="off()">Télécharger l’application (hors connexion)</button></div><p id=bkm class=mut></p>'
+            '</b><span>scolarité encaissée</span></div></div>' +
+            '<div style="background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;margin:24px 0">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px">' +
+            '<h3 style="margin:0">Connexion Base de Données MySQL</h3>' +
+            '<span id="db-badge" style="padding:4px 12px;border-radius:12px;font-size:0.82rem;font-weight:700;background:#f3f4f6;color:#374151;border:1px solid #d1d5db">Chargement statut...</span>' +
+            '</div>' +
+            '<p class=mut style="margin:0 0 14px">Connectez votre base de données MySQL. Toutes les rubriques (Élèves, Enseignants, Matières, Notes, Paiements, Absences, Emploi du temps) y sont synchronisées en direct sans aucune donnée fictive.</p>' +
+            '<div class=row style="margin:8px 0">' +
+            '<label>Hôte MySQL (Serveur)<input id=myh value="localhost" placeholder="ex: 127.0.0.1 ou serveur distant" style="min-width:200px"></label>' +
+            '<label>Port<input id=myp type=number value="3306" style="width:85px"></label>' +
+            '<label>Utilisateur MySQL<input id=myu value="root" placeholder="root" style="width:130px"></label>' +
+            '<label>Mot de passe<input id=mypw type=password placeholder="Mot de passe" style="width:140px"></label>' +
+            '<label>Nom de la base<input id=mydb value="gestion_scolaire" placeholder="gestion_scolaire" style="width:150px"></label>' +
+            '<label style="flex-direction:row;align-items:center;gap:6px;padding-top:20px;cursor:pointer"><input id=myssl type=checkbox style="min-height:0"> SSL</label>' +
+            '</div>' +
+            '<div class=row style="margin:12px 0 6px">' +
+            '<button class=btn onclick="connectMySql()">Connecter et synchroniser MySQL</button>' +
+            '<button class="btn ghost" style="color:var(--ink)" onclick="testMySqlConn()">Tester la connexion</button>' +
+            '<a href="/schema.sql" download="schema.sql" class="btn ghost" style="color:var(--pri);text-decoration:none;display:inline-flex;align-items:center;padding:7px 12px">Télécharger le script SQL (schema.sql)</a>' +
+            '</div>' +
+            '<div id=mytestres style="font-weight:600;margin-top:8px;font-size:0.9rem"></div>' +
+            '</div>' +
+            '<h3>Sauvegarde des données</h3><p class=mut>Les données restent dans ce navigateur et sont synchronisées en continu avec le serveur.</p><div class=row><button class=btn onclick="bk()">Copier la sauvegarde</button><button class="btn ghost" style="color:var(--ink)" onclick="rs()">Restaurer depuis la zone ci-dessous</button></div><textarea id=bkt rows=5 placeholder="Collez ici une sauvegarde pour la restaurer" style="width:100%;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:6px;padding:8px"></textarea><div class=row><button class=btn onclick="off()">Télécharger l’application (hors connexion)</button></div><p id=bkm class=mut></p>'
           );
         },
         cartes: function () {
@@ -2141,14 +2166,74 @@
           });
       }
 
+      function loadDbStatusAndConfig() {
+        var badge = document.getElementById("db-badge");
+        fetch("/api/status")
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (data) {
+            if (data.ok && data.stats) {
+              var s = data.stats;
+              if (badge) {
+                if (s.isMySQL) {
+                  badge.style.background = "#dcfce7";
+                  badge.style.color = "#166534";
+                  badge.style.borderColor = "#86efac";
+                  badge.textContent =
+                    "🟢 Connecté à MySQL : " +
+                    (s.mySQLConfig
+                      ? s.mySQLConfig.user +
+                        "@" +
+                        s.mySQLConfig.host +
+                        "/" +
+                        s.mySQLConfig.database
+                      : "MySQL actif");
+                } else {
+                  badge.style.background = "#fef3c7";
+                  badge.style.color = "#92400e";
+                  badge.style.borderColor = "#fde68a";
+                  badge.textContent =
+                    "🟠 Moteur SQL local actif (En attente de vos identifiants MySQL)";
+                }
+              }
+            }
+          })
+          .catch(function () {});
+
+        fetch("/api/database/config")
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (res) {
+            if (res.ok && res.config) {
+              var c = res.config;
+              var myh = document.getElementById("myh");
+              var myp = document.getElementById("myp");
+              var myu = document.getElementById("myu");
+              var mydb = document.getElementById("mydb");
+              var myssl = document.getElementById("myssl");
+              if (myh && c.host) myh.value = c.host;
+              if (myp && c.port) myp.value = c.port;
+              if (myu && c.user) myu.value = c.user;
+              if (mydb && c.database) mydb.value = c.database;
+              if (myssl) myssl.checked = !!c.ssl;
+            }
+          })
+          .catch(function () {});
+      }
+
       function testMySqlConn() {
-        var h = document.getElementById("myh").value.trim();
-        var p = document.getElementById("myp").value.trim();
-        var u = document.getElementById("myu").value.trim();
-        var pw = document.getElementById("mypw").value;
-        var db = document.getElementById("mydb").value.trim();
+        var h = (document.getElementById("myh") ? document.getElementById("myh").value : "").trim();
+        var p = (document.getElementById("myp") ? document.getElementById("myp").value : "").trim();
+        var u = (document.getElementById("myu") ? document.getElementById("myu").value : "").trim();
+        var pw = document.getElementById("mypw") ? document.getElementById("mypw").value : "";
+        var db = (document.getElementById("mydb") ? document.getElementById("mydb").value : "").trim();
+        var ssl = document.getElementById("myssl") ? document.getElementById("myssl").checked : false;
         var resEl = document.getElementById("mytestres");
-        resEl.textContent = "Test de connexion MySQL en cours...";
+        if (!resEl) return;
+        resEl.style.color = "var(--mut)";
+        resEl.textContent = "Test de connexion MySQL en cours vers " + h + ":" + (p || 3306) + "...";
         fetch("/api/database/test-mysql", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -2158,6 +2243,7 @@
             user: u,
             password: pw,
             database: db,
+            ssl: ssl,
           }),
         })
           .then(function (r) {
@@ -2165,18 +2251,81 @@
           })
           .then(function (data) {
             if (data.ok) {
-              resEl.className = "ok";
+              resEl.style.color = "var(--ok)";
               resEl.textContent = "✅ " + data.message;
             } else {
-              resEl.className = "bad";
+              resEl.style.color = "var(--bad)";
               resEl.textContent =
-                "❌ Échec de connexion : " +
+                "❌ Échec du test : " +
                 (data.error || "Serveur MySQL injoignable");
             }
           })
           .catch(function (err) {
-            resEl.className = "bad";
+            resEl.style.color = "var(--bad)";
             resEl.textContent = "❌ Erreur réseau : " + err.message;
+          });
+      }
+
+      function connectMySql() {
+        var h = (document.getElementById("myh") ? document.getElementById("myh").value : "").trim();
+        var p = (document.getElementById("myp") ? document.getElementById("myp").value : "").trim();
+        var u = (document.getElementById("myu") ? document.getElementById("myu").value : "").trim();
+        var pw = document.getElementById("mypw") ? document.getElementById("mypw").value : "";
+        var db = (document.getElementById("mydb") ? document.getElementById("mydb").value : "").trim();
+        var ssl = document.getElementById("myssl") ? document.getElementById("myssl").checked : false;
+        var resEl = document.getElementById("mytestres");
+
+        if (!h || !u || !db) {
+          if (resEl) {
+            resEl.style.color = "var(--bad)";
+            resEl.textContent = "❌ Veuillez renseigner au minimum l’hôte, l’utilisateur et le nom de la base de données.";
+          }
+          return;
+        }
+
+        if (resEl) {
+          resEl.style.color = "var(--mut)";
+          resEl.textContent = "Connexion et initialisation des tables MySQL en cours...";
+        }
+
+        fetch("/api/database/connect-mysql", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            host: h,
+            port: p,
+            user: u,
+            password: pw,
+            database: db,
+            ssl: ssl,
+          }),
+        })
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (data) {
+            if (data.ok) {
+              if (resEl) {
+                resEl.style.color = "var(--ok)";
+                resEl.textContent = "✅ " + data.message;
+              }
+              loadDbStatusAndConfig();
+              if (data.data) {
+                S = data.data;
+                save();
+              }
+            } else {
+              if (resEl) {
+                resEl.style.color = "var(--bad)";
+                resEl.textContent = "❌ Échec de connexion : " + (data.error || "Impossible de se connecter");
+              }
+            }
+          })
+          .catch(function (err) {
+            if (resEl) {
+              resEl.style.color = "var(--bad)";
+              resEl.textContent = "❌ Erreur de communication : " + err.message;
+            }
           });
       }
 

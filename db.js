@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import mysql from 'mysql2/promise';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
@@ -9,49 +10,47 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DB_PATH = path.join(__dirname, 'gestion_scolaire.db');
+const CONFIG_FILE = path.join(__dirname, 'mysql_config.json');
 
 // Database mode: 'mysql' or 'sqlite'
 let dbMode = 'sqlite';
 let mysqlPool = null;
 let sqliteDb = null;
+let currentMySQLConfig = null;
+
+export function loadSavedConfig() {
+  if (fs.existsSync(CONFIG_FILE)) {
+    try {
+      return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+}
+
+export function saveMySQLConfigFile(cfg) {
+  try {
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Erreur écriture mysql_config.json:', e);
+  }
+}
 
 // Initialize connection
 export async function initDatabase() {
-  const host = process.env.MYSQL_HOST;
-  const user = process.env.MYSQL_USER;
-  const password = process.env.MYSQL_PASSWORD || '';
-  const database = process.env.MYSQL_DATABASE;
-  const port = parseInt(process.env.MYSQL_PORT || '3306');
-  const useSsl = process.env.MYSQL_SSL === 'true';
+  const savedCfg = loadSavedConfig();
+  const host = savedCfg?.host || process.env.MYSQL_HOST;
+  const user = savedCfg?.user || process.env.MYSQL_USER;
+  const password = savedCfg?.password !== undefined ? savedCfg.password : (process.env.MYSQL_PASSWORD || '');
+  const database = savedCfg?.database || process.env.MYSQL_DATABASE;
+  const port = parseInt(savedCfg?.port || process.env.MYSQL_PORT || '3306');
+  const useSsl = savedCfg?.ssl === true || process.env.MYSQL_SSL === 'true';
 
   if (host && user && database) {
-    try {
-      console.log(`Tentative de connexion au serveur MySQL ${host}:${port}/${database}...`);
-      mysqlPool = mysql.createPool({
-        host,
-        port,
-        user,
-        password,
-        database,
-        ssl: useSsl ? { rejectUnauthorized: false } : undefined,
-        waitForConnections: true,
-        connectionLimit: 10,
-        queueLimit: 0,
-        connectTimeout: 8000,
-        enableKeepAlive: true,
-      });
-
-      // Test connection
-      const connection = await mysqlPool.getConnection();
-      console.log('Connecté avec succès au serveur MySQL !');
-      connection.release();
-
-      dbMode = 'mysql';
-      await initMySQLTables();
+    const res = await connectMySQLPool({ host, user, password, database, port, ssl: useSsl });
+    if (res.ok) {
       return;
-    } catch (err) {
-      console.warn('Impossible de se connecter au serveur MySQL:', err.message);
-      console.log('Utilisation du moteur SQL local...');
     }
   }
 
@@ -60,8 +59,81 @@ export async function initDatabase() {
   initSQLite();
 }
 
+export async function connectMySQLPool(cfg) {
+  try {
+    const port = parseInt(cfg.port) || 3306;
+    console.log(`Tentative de connexion à MySQL ${cfg.user}@${cfg.host}:${port}/${cfg.database}...`);
+
+    // Tenter de créer la base de données automatiquement si elle n'existe pas encore
+    try {
+      const bootstrapConn = await mysql.createConnection({
+        host: cfg.host,
+        port: port,
+        user: cfg.user,
+        password: cfg.password || '',
+        ssl: cfg.ssl ? { rejectUnauthorized: false } : undefined,
+        connectTimeout: 6000,
+      });
+      await bootstrapConn.query(`CREATE DATABASE IF NOT EXISTS \`${cfg.database}\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+      await bootstrapConn.end();
+    } catch (bootstrapErr) {
+      // Ignorer si les privilèges sont limités à une base préexistante
+      console.log('Notice bootstrap DB:', bootstrapErr.message);
+    }
+
+    const pool = mysql.createPool({
+      host: cfg.host,
+      port: port,
+      user: cfg.user,
+      password: cfg.password || '',
+      database: cfg.database,
+      ssl: cfg.ssl ? { rejectUnauthorized: false } : undefined,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+      connectTimeout: 8000,
+      enableKeepAlive: true,
+    });
+
+    const conn = await pool.getConnection();
+    await conn.ping();
+    conn.release();
+
+    if (mysqlPool) {
+      try { await mysqlPool.end(); } catch (e) {}
+    }
+
+    mysqlPool = pool;
+    dbMode = 'mysql';
+    currentMySQLConfig = {
+      host: cfg.host,
+      port: port,
+      user: cfg.user,
+      database: cfg.database,
+      ssl: !!cfg.ssl,
+    };
+
+    await initMySQLTables();
+    console.log(`✅ Connecté avec succès à la base MySQL "${cfg.database}" sur ${cfg.host}:${port}`);
+    return { ok: true, message: `Connecté avec succès à la base MySQL "${cfg.database}" sur ${cfg.host}:${port}` };
+  } catch (err) {
+    console.warn(`❌ Échec de connexion MySQL (${cfg.host}):`, err.message);
+    let friendly = err.message;
+    if (err.code === 'ECONNREFUSED') {
+      friendly = `Connexion refusée sur ${cfg.host}:${cfg.port || 3306}. Vérifiez que le serveur MySQL est démarré et autorise les connexions réseau.`;
+    } else if (err.code === 'ER_ACCESS_DENIED_ERROR') {
+      friendly = `Accès refusé pour l'utilisateur '${cfg.user}'. Vérifiez le nom d'utilisateur et le mot de passe MySQL.`;
+    } else if (err.code === 'ENOTFOUND') {
+      friendly = `Hôte '${cfg.host}' introuvable. Vérifiez l'adresse IP ou le nom de domaine de votre serveur MySQL.`;
+    } else if (err.code === 'ETIMEDOUT') {
+      friendly = `Délai d'attente dépassé vers ${cfg.host}:${cfg.port || 3306}. Vérifiez votre pare-feu ou vos règles de sécurité.`;
+    }
+    return { ok: false, error: friendly, code: err.code };
+  }
+}
+
 // ------------------------------------------------------------
-// Initialisation des tables MySQL (sans aucune donnée fictive)
+// Initialisation des tables MySQL
 // ------------------------------------------------------------
 async function initMySQLTables() {
   const tables = [
@@ -165,11 +237,10 @@ async function initMySQLTables() {
   for (const q of tables) {
     await mysqlPool.query(q);
   }
-  console.log('Tables MySQL vérifiées et prêtes (aucune donnée fictive).');
 }
 
 // ------------------------------------------------------------
-// Initialisation des tables SQLite (sans aucune donnée fictive)
+// Initialisation SQLite de secours
 // ------------------------------------------------------------
 function initSQLite() {
   sqliteDb = new DatabaseSync(DB_PATH);
@@ -186,7 +257,6 @@ function initSQLite() {
   `);
 }
 
-// Helper query runner
 async function queryAll(sql, params = []) {
   if (dbMode === 'mysql' && mysqlPool) {
     const [rows] = await mysqlPool.execute(sql, params);
@@ -205,7 +275,7 @@ async function executeSql(sql, params = []) {
 }
 
 // ------------------------------------------------------------
-// Lecture de l'état réel de la base (sans donnée fictive)
+// Lecture de l'état réel de la base
 // ------------------------------------------------------------
 export async function getAppState() {
   try {
@@ -324,9 +394,8 @@ export async function getAppState() {
 }
 
 // ------------------------------------------------------------
-// Opérations CRUD adaptées MySQL et SQLite
+// CRUD
 // ------------------------------------------------------------
-
 export async function saveEleve(data) {
   if (dbMode === 'mysql') {
     const sql = `
@@ -683,6 +752,8 @@ export async function getDbStats() {
   return {
     engine: dbMode === 'mysql' ? 'MySQL Server Database' : 'SQLite Database Engine',
     mode: dbMode,
+    isMySQL: dbMode === 'mysql',
+    mySQLConfig: currentMySQLConfig,
     tables: tables.length,
     counts,
   };
