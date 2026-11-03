@@ -8,6 +8,7 @@
     "build": "node -e \"console.log('Build completed')\""
   },
   "dependencies": {
+    "dotenv": "^18.0.9",
     "express": "^4.21.2",
     "mysql2": "^3.24.6"
   }

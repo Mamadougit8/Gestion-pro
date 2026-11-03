@@ -1,5 +1,6 @@
 -- ============================================================
--- SCRIPT DE BASE DE DONNÉES MYSQL - GESTION SCOLAIRE PRO
+-- BASE DE DONNÉES MYSQL PROPRE - GESTION SCOLAIRE PRO
+-- Schéma relationnel officiel (Sans aucune donnée fictive)
 -- Compatible : MySQL 5.7+, MySQL 8.0+, MariaDB 10.3+, phpMyAdmin
 -- ============================================================
 

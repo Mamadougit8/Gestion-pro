@@ -480,29 +480,27 @@
           pcl: CL[0],
         };
       function seed() {
-        var n = [
-          ["Aminata Traoré", 0],
-          ["Moussa Keïta", 0],
-          ["Fatoumata Diarra", 1],
-          ["Ibrahim Coulibaly", 2],
-          ["Mariam Sangaré", 3],
-          ["Seydou Konaté", 4],
-          ["Awa Dembélé", 5],
-          ["Oumar Sissoko", 5],
-        ];
         return {
-          eleves: n.map(function (x, i) {
-            return { id: "e" + i, nom: x[0], cl: CL[x[1]] };
-          }),
+          eleves: [],
           notes: {},
           abs: {},
+          paie: [],
+          ens: [],
+          dec: {},
+          appel: {},
+          mc: {},
+          edt: {},
+          ecole: "",
+          an: "",
+          dir: "",
+          pe: 2,
         };
       }
       var S;
       try {
         S = JSON.parse(localStorage.getItem("gs"));
       } catch (e) {}
-      if (!S || !S.eleves) S = seed();
+      if (!S || !Array.isArray(S.eleves)) S = seed();
       S.paie = S.paie || [];
       S.ens = S.ens || [];
       S.dec = S.dec || {};
