@@ -624,6 +624,14 @@ export async function deleteMatiere(classe, nom) {
   await executeSql('DELETE FROM matieres WHERE id = ?', [id]);
 }
 
+export async function saveClasseMatieres(classe, matieres) {
+  if (!classe || !matieres || typeof matieres !== 'object') return;
+  await executeSql('DELETE FROM matieres WHERE classe = ?', [classe]);
+  for (const [nom, coef] of Object.entries(matieres)) {
+    await saveMatiere(classe, nom, coef);
+  }
+}
+
 export async function saveEdt(classe, creneaux, grille) {
   const creneauxJson = JSON.stringify(creneaux);
   const grilleJson = JSON.stringify(grille);
@@ -666,12 +674,26 @@ export async function saveConfig(cle, valeur) {
   }
 }
 
-export async function bulkSync(state) {
+export async function bulkSync(state, replace = false) {
   if (!state) return;
-  if (state.ecole) await saveConfig('ecole', state.ecole);
-  if (state.an) await saveConfig('an', state.an);
-  if (state.dir) await saveConfig('dir', state.dir);
-  if (state.pe) await saveConfig('pe', state.pe);
+  if (replace) {
+    const tablesToClear = ['notes', 'paiements', 'absences', 'appels', 'emploi_du_temps', 'matieres', 'enseignants', 'eleves', 'configuration'];
+    if (dbMode === 'mysql' && mysqlPool) {
+      await executeSql('SET FOREIGN_KEY_CHECKS = 0');
+      for (const t of tablesToClear) {
+        await executeSql(`DELETE FROM \`${t}\``);
+      }
+      await executeSql('SET FOREIGN_KEY_CHECKS = 1');
+    } else {
+      for (const t of tablesToClear) {
+        await executeSql(`DELETE FROM ${t}`);
+      }
+    }
+  }
+  if (state.ecole !== undefined) await saveConfig('ecole', state.ecole || '');
+  if (state.an !== undefined) await saveConfig('an', state.an || '');
+  if (state.dir !== undefined) await saveConfig('dir', state.dir || '');
+  if (state.pe !== undefined) await saveConfig('pe', state.pe || 2);
 
   if (Array.isArray(state.eleves)) {
     for (const e of state.eleves) {

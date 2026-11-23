@@ -532,7 +532,7 @@
       }
       function syncEdt(classe) {
         if (!S.edt || !S.edt[classe]) return;
-        apiPost("/api/edt", {
+        apiPost("api/edt", {
           classe: classe,
           creneaux: S.edt[classe].sl,
           grille: S.edt[classe].c,
@@ -805,7 +805,7 @@
             esc(S.dir || "") +
             '" onchange="setF(\'dir\',this.value)"></label><label>Poids de la note d’examen<input type=number min=1 step=0.5 value="' +
             (S.pe || 2) +
-            '" onchange="S.pe=Math.max(1,parseFloat(this.value)||2);save();apiPost(\'/api/config\',{cle:\'pe\',valeur:S.pe})"></label></div><div class=stats><div class="stat hi"><b>' +
+            '" onchange="S.pe=Math.max(1,parseFloat(this.value)||2);save();apiPost(\'api/config\',{cle:\'pe\',valeur:S.pe})"></label></div><div class=stats><div class="stat hi"><b>' +
             S.eleves.length +
             "</b><span>élèves</span></div><div class=stat><b>" +
             S.ens.length +
@@ -814,22 +814,24 @@
             '</b><span>scolarité encaissée</span></div></div>' +
             '<div style="background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;margin:24px 0">' +
             '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px">' +
-            '<h3 style="margin:0">Connexion Base de Données MySQL</h3>' +
+            '<h3 style="margin:0">Base de Données XAMPP (MySQL) &amp; Backend PHP</h3>' +
             '<span id="db-badge" style="padding:4px 12px;border-radius:12px;font-size:0.82rem;font-weight:700;background:#f3f4f6;color:#374151;border:1px solid #d1d5db">Chargement statut...</span>' +
             '</div>' +
-            '<p class=mut style="margin:0 0 14px">Connectez votre base de données MySQL. Toutes les rubriques (Élèves, Enseignants, Matières, Notes, Paiements, Absences, Emploi du temps) y sont synchronisées en direct sans aucune donnée fictive.</p>' +
+            '<p class=mut style="margin:0 0 14px">Chaque rubrique de l’application est connectée à sa table SQL dédiée. Sous XAMPP, le backend PHP (<code>php/api.php</code> + PDO) se connecte directement à la base MySQL <code>gestion_scolaire</code>.</p>' +
+            '<div id="rubriques-status" class="wrap" style="margin-bottom:16px"><table><tr><th>Rubrique</th><th>Table SQL</th><th>Enregistrements</th><th>État</th></tr><tr><td colspan="4" class="mut">Chargement des tables...</td></tr></table></div>' +
             '<div class=row style="margin:8px 0">' +
-            '<label>Hôte MySQL (Serveur)<input id=myh value="localhost" placeholder="ex: 127.0.0.1 ou serveur distant" style="min-width:200px"></label>' +
+            '<label>Hôte MySQL (XAMPP)<input id=myh value="127.0.0.1" placeholder="127.0.0.1 ou localhost" style="min-width:180px"></label>' +
             '<label>Port<input id=myp type=number value="3306" style="width:85px"></label>' +
             '<label>Utilisateur MySQL<input id=myu value="root" placeholder="root" style="width:130px"></label>' +
-            '<label>Mot de passe<input id=mypw type=password placeholder="Mot de passe" style="width:140px"></label>' +
+            '<label>Mot de passe<input id=mypw type=password placeholder="(vide sous XAMPP)" style="width:150px"></label>' +
             '<label>Nom de la base<input id=mydb value="gestion_scolaire" placeholder="gestion_scolaire" style="width:150px"></label>' +
             '<label style="flex-direction:row;align-items:center;gap:6px;padding-top:20px;cursor:pointer"><input id=myssl type=checkbox style="min-height:0"> SSL</label>' +
             '</div>' +
             '<div class=row style="margin:12px 0 6px">' +
             '<button class=btn onclick="connectMySql()">Connecter et synchroniser MySQL</button>' +
             '<button class="btn ghost" style="color:var(--ink)" onclick="testMySqlConn()">Tester la connexion</button>' +
-            '<a href="/schema.sql" download="schema.sql" class="btn ghost" style="color:var(--pri);text-decoration:none;display:inline-flex;align-items:center;padding:7px 12px">Télécharger le script SQL (schema.sql)</a>' +
+            '<a href="api/export-xampp-zip" download="gestion-scolaire-xampp-php.zip" class=btn style="background:var(--ok);text-decoration:none;display:inline-flex;align-items:center">Télécharger le pack XAMPP + PHP (.zip)</a>' +
+            '<a href="schema_xampp.sql" download="schema_xampp.sql" class="btn ghost" style="color:var(--pri);text-decoration:none;display:inline-flex;align-items:center;padding:7px 12px">Télécharger schema_xampp.sql</a>' +
             '</div>' +
             '<div id=mytestres style="font-weight:600;margin-top:8px;font-size:0.9rem"></div>' +
             '</div>' +
@@ -1041,7 +1043,7 @@
           var h =
             '<h2>Bulletin</h2><div class=row><label>École<input value="' +
             esc(S.ecole || "") +
-            '" placeholder="Nom de l’école" onchange="S.ecole=this.value;save()"></label><label>Classe<select onchange="ui.cl=this.value;draw()">' +
+            '" placeholder="Nom de l’école" onchange="setF(\'ecole\',this.value)"></label><label>Classe<select onchange="ui.cl=this.value;draw()">' +
             opts(CL, ui.cl) +
             '</select></label><label>Élève<select onchange="ui.el=this.value;draw()">' +
             l
@@ -1322,7 +1324,7 @@
         S.paie.push(p);
         save();
         draw();
-        apiPost("/api/paiements", p);
+        apiPost("api/paiements", p);
       }
       function delP(id) {
         S.paie = S.paie.filter(function (p) {
@@ -1330,7 +1332,7 @@
         });
         save();
         draw();
-        apiDelete("/api/paiements/" + id);
+        apiDelete("api/paiements/" + encodeURIComponent(id));
       }
       function printB(a) {
         document.body.className = a ? "pa" : "";
@@ -1419,7 +1421,7 @@
         S.appel[ui.date + "|" + ui.cl] = 1;
         save();
         draw();
-        apiPost("/api/appels", { date: ui.date, classe: ui.cl, statut: 1 });
+        apiPost("api/appels", { date: ui.date, classe: ui.cl, statut: 1 });
       }
       function addT() {
         var n = document.getElementById("tn").value.trim();
@@ -1441,7 +1443,7 @@
         S.ens.push(t);
         save();
         draw();
-        apiPost("/api/enseignants", t);
+        apiPost("api/enseignants", t);
       }
       function delT(id) {
         S.ens = S.ens.filter(function (t) {
@@ -1449,7 +1451,7 @@
         });
         save();
         draw();
-        apiDelete("/api/enseignants/" + id);
+        apiDelete("api/enseignants/" + encodeURIComponent(id));
       }
       function pres() {
         var tot = 0,
@@ -1522,12 +1524,12 @@
         else delete S.dec[id];
         save();
         draw();
-        apiPost("/api/eleves/" + id + "/decision", { decision: v });
+        apiPost("api/eleves/" + encodeURIComponent(id) + "/decision", { decision: v });
       }
       function setF(k, v) {
         S[k] = v.trim();
         save();
-        apiPost("/api/config", { cle: k, valeur: S[k] });
+        apiPost("api/config", { cle: k, valeur: S[k] });
       }
       function bk() {
         var t = document.getElementById("bkt"),
@@ -1558,6 +1560,7 @@
           S.dec = S.dec || {};
           save();
           draw();
+          apiPost("api/sync", Object.assign({ replace: true }, S));
         } catch (e) {
           m.textContent = "Sauvegarde invalide : rien n’a été modifié.";
         }
@@ -1716,7 +1719,7 @@
         ui.cl = o.cl;
         save();
         draw();
-        apiPost("/api/eleves", o);
+        apiPost("api/eleves", o);
       }
       function cs(e, ed) {
         return (
@@ -1789,7 +1792,7 @@
               e.ph = c.toDataURL("image/jpeg", 0.7);
               save();
               draw();
-              apiPost("/api/eleves/" + id + "/photo", { photo: e.ph });
+              apiPost("api/eleves/" + encodeURIComponent(id) + "/photo", { photo: e.ph });
             }
           };
           im.src = r.result;
@@ -1853,7 +1856,10 @@
       }
       function mcw() {
         if (!S.mc) S.mc = {};
-        if (!S.mc[ui.cl]) S.mc[ui.cl] = JSON.parse(JSON.stringify(MAof(ui.cl)));
+        if (!S.mc[ui.cl]) {
+          S.mc[ui.cl] = JSON.parse(JSON.stringify(MAof(ui.cl)));
+          apiPost("api/matieres/classe", { classe: ui.cl, matieres: S.mc[ui.cl] });
+        }
         return S.mc[ui.cl];
       }
       function mcS(i, v) {
@@ -1862,7 +1868,7 @@
         var coef = Math.max(0.5, parseFloat(v) || 1);
         M[nom] = coef;
         save();
-        apiPost("/api/matieres", { classe: ui.cl, nom: nom, coef: coef });
+        apiPost("api/matieres", { classe: ui.cl, nom: nom, coef: coef });
       }
       function mcD(i) {
         var M = mcw();
@@ -1870,7 +1876,7 @@
         delete M[nom];
         save();
         draw();
-        apiDelete("/api/matieres/" + encodeURIComponent(ui.cl) + "/" + encodeURIComponent(nom));
+        apiDelete("api/matieres/" + encodeURIComponent(ui.cl) + "/" + encodeURIComponent(nom));
       }
       function mcA() {
         var n = document.getElementById("mn").value.trim();
@@ -1882,7 +1888,7 @@
         mcw()[n] = coef;
         save();
         draw();
-        apiPost("/api/matieres", { classe: ui.cl, nom: n, coef: coef });
+        apiPost("api/matieres", { classe: ui.cl, nom: n, coef: coef });
       }
       function ed(c) {
         if (!S.edt) S.edt = {};
@@ -2026,7 +2032,7 @@
         });
         save();
         draw();
-        apiDelete("/api/eleves/" + id);
+        apiDelete("api/eleves/" + encodeURIComponent(id));
       }
       function nm(id, m, t) {
         var c = S.notes[id + "|" + m + "|" + t + "|c"],
@@ -2066,7 +2072,7 @@
           i.value = v;
         }
         save();
-        apiPost("/api/notes", {
+        apiPost("api/notes", {
           eleveId: id,
           matiere: m,
           trimestre: ui.t,
@@ -2098,13 +2104,13 @@
         S.appel[ui.date + "|" + ui.cl] = 1;
         save();
         draw();
-        apiPost("/api/absences", {
+        apiPost("api/absences", {
           date: ui.date,
           eleveId: id,
           type: v,
           motif: motif,
         });
-        apiPost("/api/appels", {
+        apiPost("api/appels", {
           date: ui.date,
           classe: ui.cl,
           statut: 1,
@@ -2115,7 +2121,7 @@
         if (S.abs[k]) {
           S.abs[k] = { t: S.abs[k].t || "A", m: v };
           save();
-          apiPost("/api/absences", {
+          apiPost("api/absences", {
             date: ui.date,
             eleveId: id,
             type: S.abs[k].t || "A",
@@ -2133,17 +2139,34 @@
           }
         return [a, r];
       }
+      function hasAnyStateData(d) {
+        if (!d) return false;
+        return Boolean(
+          (d.eleves && d.eleves.length > 0) ||
+            (d.ens && d.ens.length > 0) ||
+            (d.paie && d.paie.length > 0) ||
+            (d.notes && Object.keys(d.notes).length > 0) ||
+            (d.abs && Object.keys(d.abs).length > 0) ||
+            (d.appel && Object.keys(d.appel).length > 0) ||
+            (d.mc && Object.keys(d.mc).length > 0) ||
+            (d.edt && Object.keys(d.edt).length > 0) ||
+            d.ecole ||
+            d.an ||
+            d.dir,
+        );
+      }
+
       function syncWithDatabase(forceUser) {
         var msg = document.getElementById("sqlsyncmsg");
         if (msg) msg.textContent = "Synchronisation en cours avec la base SQL relationnelle...";
-        fetch("/api/data")
+        fetch("api/data")
           .then(function (res) {
             return res.json();
           })
           .then(function (resp) {
             if (resp && resp.ok && resp.data) {
               var d = resp.data;
-              if (d.eleves && d.eleves.length > 0) {
+              if (hasAnyStateData(d)) {
                 S = d;
                 save();
                 draw();
@@ -2151,7 +2174,7 @@
                   msg.textContent =
                     "Données synchronisées avec succès depuis la base SQL.";
               } else {
-                apiPost("/api/sync", S).then(function () {
+                apiPost("api/sync", S).then(function () {
                   if (msg)
                     msg.textContent =
                       "Données locales injectées et synchronisées dans la base SQL.";
@@ -2168,7 +2191,8 @@
 
       function loadDbStatusAndConfig() {
         var badge = document.getElementById("db-badge");
-        fetch("/api/status")
+        var rubEl = document.getElementById("rubriques-status");
+        fetch("api/status")
           .then(function (r) {
             return r.json();
           })
@@ -2181,27 +2205,56 @@
                   badge.style.color = "#166534";
                   badge.style.borderColor = "#86efac";
                   badge.textContent =
-                    "🟢 Connecté à MySQL : " +
+                    (s.isPHP ? "PHP PDO + MySQL XAMPP : " : "MySQL actif : ") +
                     (s.mySQLConfig
                       ? s.mySQLConfig.user +
                         "@" +
                         s.mySQLConfig.host +
                         "/" +
                         s.mySQLConfig.database
-                      : "MySQL actif");
+                      : "gestion_scolaire");
                 } else {
                   badge.style.background = "#fef3c7";
                   badge.style.color = "#92400e";
                   badge.style.borderColor = "#fde68a";
                   badge.textContent =
-                    "🟠 Moteur SQL local actif (En attente de vos identifiants MySQL)";
+                    "SQLite local actif (Prêt pour export XAMPP / MySQL)";
                 }
+              }
+              if (rubEl && s.counts) {
+                var rows = [
+                  ["Élèves & Cartes & Décisions", "eleves", s.counts.eleves || 0],
+                  ["Enseignants", "enseignants", s.counts.enseignants || 0],
+                  ["Matières & Coefficients", "matieres", s.counts.matieres || 0],
+                  ["Emploi du temps", "emploi_du_temps", s.counts.emploi_du_temps || 0],
+                  ["Notes & Bulletins", "notes", s.counts.notes || 0],
+                  ["Paiements", "paiements", s.counts.paiements || 0],
+                  ["Absences", "absences", s.counts.absences || 0],
+                  ["Appels du jour", "appels", s.counts.appels || 0],
+                  ["Administration & École", "configuration", s.counts.configuration || 0],
+                ];
+                rubEl.innerHTML =
+                  "<table><tr><th>Rubrique</th><th>Table SQL</th><th>Lignes en base</th><th>État</th></tr>" +
+                  rows
+                    .map(function (r) {
+                      return (
+                        "<tr><td>" +
+                        r[0] +
+                        "</td><td><code>" +
+                        r[1] +
+                        "</code></td><td>" +
+                        r[2] +
+                        '</td><td class="ok">Connectée</td></tr>'
+                      );
+                    })
+                    .join("") +
+                  "</table>";
               }
             }
           })
           .catch(function () {});
 
-        fetch("/api/database/config")
+        fetch("api/database/config")
           .then(function (r) {
             return r.json();
           })
@@ -2234,7 +2287,7 @@
         if (!resEl) return;
         resEl.style.color = "var(--mut)";
         resEl.textContent = "Test de connexion MySQL en cours vers " + h + ":" + (p || 3306) + "...";
-        fetch("/api/database/test-mysql", {
+        fetch("api/database/test-mysql", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -2252,17 +2305,17 @@
           .then(function (data) {
             if (data.ok) {
               resEl.style.color = "var(--ok)";
-              resEl.textContent = "✅ " + data.message;
+              resEl.textContent = data.message;
             } else {
               resEl.style.color = "var(--bad)";
               resEl.textContent =
-                "❌ Échec du test : " +
+                "Échec du test : " +
                 (data.error || "Serveur MySQL injoignable");
             }
           })
           .catch(function (err) {
             resEl.style.color = "var(--bad)";
-            resEl.textContent = "❌ Erreur réseau : " + err.message;
+            resEl.textContent = "Erreur réseau : " + err.message;
           });
       }
 
@@ -2278,7 +2331,7 @@
         if (!h || !u || !db) {
           if (resEl) {
             resEl.style.color = "var(--bad)";
-            resEl.textContent = "❌ Veuillez renseigner au minimum l’hôte, l’utilisateur et le nom de la base de données.";
+            resEl.textContent = "Veuillez renseigner au minimum l’hôte, l’utilisateur et le nom de la base de données.";
           }
           return;
         }
@@ -2288,7 +2341,7 @@
           resEl.textContent = "Connexion et initialisation des tables MySQL en cours...";
         }
 
-        fetch("/api/database/connect-mysql", {
+        fetch("api/database/connect-mysql", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -2307,7 +2360,7 @@
             if (data.ok) {
               if (resEl) {
                 resEl.style.color = "var(--ok)";
-                resEl.textContent = "✅ " + data.message;
+                resEl.textContent = data.message;
               }
               loadDbStatusAndConfig();
               if (data.data) {
@@ -2317,32 +2370,32 @@
             } else {
               if (resEl) {
                 resEl.style.color = "var(--bad)";
-                resEl.textContent = "❌ Échec de connexion : " + (data.error || "Impossible de se connecter");
+                resEl.textContent = "Échec de connexion : " + (data.error || "Impossible de se connecter");
               }
             }
           })
           .catch(function (err) {
             if (resEl) {
               resEl.style.color = "var(--bad)";
-              resEl.textContent = "❌ Erreur de communication : " + err.message;
+              resEl.textContent = "Erreur de communication : " + err.message;
             }
           });
       }
 
       function initDatabaseSync() {
-        fetch("/api/data")
+        fetch("api/data")
           .then(function (res) {
             return res.json();
           })
           .then(function (resp) {
             if (resp && resp.ok && resp.data) {
               var d = resp.data;
-              if (d.eleves && d.eleves.length > 0) {
+              if (hasAnyStateData(d)) {
                 S = d;
                 save();
                 draw();
-              } else if (S && S.eleves && S.eleves.length > 0) {
-                apiPost("/api/sync", S);
+              } else if (hasAnyStateData(S)) {
+                apiPost("api/sync", S);
               }
             }
           })
