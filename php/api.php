@@ -65,15 +65,15 @@ try {
             jsonResponse(['ok' => true]);
         }
         if ($method === 'POST' && count($segments) === 3 && $segments[2] === 'photo') {
-            EleveController::updatePhoto($pdo, urldecode($segments[1]), (string)(getJsonBody()['photo'] ?? ''));
+            EleveController::updatePhoto($pdo, $segments[1], (string)(getJsonBody()['photo'] ?? ''));
             jsonResponse(['ok' => true]);
         }
         if ($method === 'POST' && count($segments) === 3 && $segments[2] === 'decision') {
-            EleveController::updateDecision($pdo, urldecode($segments[1]), (string)(getJsonBody()['decision'] ?? ''));
+            EleveController::updateDecision($pdo, $segments[1], (string)(getJsonBody()['decision'] ?? ''));
             jsonResponse(['ok' => true]);
         }
         if ($method === 'DELETE' && count($segments) === 2) {
-            EleveController::delete($pdo, urldecode($segments[1]));
+            EleveController::delete($pdo, $segments[1]);
             jsonResponse(['ok' => true]);
         }
     }
@@ -86,7 +86,7 @@ try {
             jsonResponse(['ok' => true]);
         }
         if ($method === 'DELETE' && count($segments) === 2) {
-            EnseignantController::delete($pdo, urldecode($segments[1]));
+            EnseignantController::delete($pdo, $segments[1]);
             jsonResponse(['ok' => true]);
         }
     }
@@ -105,7 +105,7 @@ try {
             jsonResponse(['ok' => true]);
         }
         if ($method === 'DELETE' && count($segments) === 3) {
-            MatiereController::delete($pdo, urldecode($segments[1]), urldecode($segments[2]));
+            MatiereController::delete($pdo, $segments[1], $segments[2]);
             jsonResponse(['ok' => true]);
         }
     }

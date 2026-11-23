@@ -471,10 +471,10 @@ export async function updateEleveDecision(id, decision) {
 }
 
 export async function deleteEleve(id) {
-  await executeSql('DELETE FROM eleves WHERE id = ?', [id]);
   await executeSql('DELETE FROM notes WHERE eleve_id = ?', [id]);
   await executeSql('DELETE FROM paiements WHERE eleve_id = ?', [id]);
   await executeSql('DELETE FROM absences WHERE eleve_id = ?', [id]);
+  await executeSql('DELETE FROM eleves WHERE id = ?', [id]);
 }
 
 export async function saveEnseignant(data) {
@@ -536,18 +536,39 @@ export async function saveNote(eleveId, matiere, trimestre, typeNote, note) {
 }
 
 export async function savePaiement(data) {
-  const sql = `
-    INSERT INTO paiements (id, eleve_id, montant, mode, reference, date_paiement)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `;
-  await executeSql(sql, [
+  const params = [
     data.id,
     data.el,
     parseFloat(data.m),
     data.mode,
     data.ref || null,
     data.d,
-  ]);
+  ];
+  if (dbMode === 'mysql') {
+    const sql = `
+      INSERT INTO paiements (id, eleve_id, montant, mode, reference, date_paiement)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        eleve_id = VALUES(eleve_id),
+        montant = VALUES(montant),
+        mode = VALUES(mode),
+        reference = VALUES(reference),
+        date_paiement = VALUES(date_paiement)
+    `;
+    await executeSql(sql, params);
+  } else {
+    const sql = `
+      INSERT INTO paiements (id, eleve_id, montant, mode, reference, date_paiement)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        eleve_id = excluded.eleve_id,
+        montant = excluded.montant,
+        mode = excluded.mode,
+        reference = excluded.reference,
+        date_paiement = excluded.date_paiement
+    `;
+    await executeSql(sql, params);
+  }
 }
 
 export async function deletePaiement(id) {

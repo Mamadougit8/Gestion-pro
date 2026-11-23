@@ -575,11 +575,35 @@
             return { ok: false, error: e.message };
           });
       }
-      function apiDelete(url) {
+      function apiDelete(url, msgElId, successMsg) {
         userInteracted = true;
-        return fetch(url, { method: "DELETE" }).catch(function (e) {
-          console.warn("SQL API delete error:", e);
-        });
+        return fetch(url, { method: "DELETE" })
+          .then(function (r) {
+            return r
+              .json()
+              .catch(function () {
+                return { ok: r.ok };
+              })
+              .then(function (res) {
+                if (!r.ok || (res && res.ok === false)) {
+                  if (msgElId) {
+                    showFeedback(
+                      msgElId,
+                      "Supprimé localement, erreur serveur : " +
+                        ((res && res.error) || "HTTP " + r.status),
+                      true,
+                    );
+                  }
+                } else if (msgElId && successMsg) {
+                  showFeedback(msgElId, successMsg, false);
+                }
+                return res;
+              });
+          })
+          .catch(function (e) {
+            console.warn("SQL API delete error:", e);
+            return { ok: false, error: e.message };
+          });
       }
       function syncEdt(classe) {
         if (!S.edt || !S.edt[classe]) return;
@@ -746,8 +770,17 @@
           );
         },
         ens: function () {
+          var te =
+            S.ens.filter(function (x) {
+              return x.id == ui.tid;
+            })[0] || {};
+          var tcl = Array.isArray(te.cl) ? te.cl : [];
           return (
-            '<h2>Enseignants</h2><div class=row><label>Nom complet<input id=tn placeholder="Prénom Nom"></label><label>Matière<select id=tm>' +
+            "<h2>" +
+            (te.id ? "Modifier un enseignant" : "Enseignants") +
+            '</h2><div class=row><label>Nom complet<input id=tn value="' +
+            esc(te.nom || "") +
+            '" placeholder="Prénom Nom"></label><label>Matière<select id=tm>' +
             opts(
               [
                 "Mathématiques",
@@ -760,19 +793,29 @@
                 "Philosophie",
                 "Économie",
               ],
-              "",
+              te.mat || "",
             ) +
-            '</select></label><label>Téléphone<input id=tt type=tel></label></div><div class=row><fieldset style="border:1px solid var(--line);border-radius:6px"><legend class=mut>Classes enseignées</legend>' +
+            '</select></label><label>Téléphone<input id=tt type=tel value="' +
+            esc(te.tel || "") +
+            '"></label></div><div class=row><fieldset style="border:1px solid var(--line);border-radius:6px"><legend class=mut>Classes enseignées</legend>' +
             CL.map(function (c) {
               return (
                 '<label style="flex-direction:row;align-items:center;display:inline-flex;margin:2px 10px 2px 0;color:var(--ink)"><input type=checkbox class=tc value="' +
                 c +
-                '" style="min-height:0"> ' +
+                '"' +
+                (tcl.indexOf(c) >= 0 ? " checked" : "") +
+                ' style="min-height:0"> ' +
                 c +
                 "</label>"
               );
             }).join("") +
-            '</fieldset><button type="button" class=btn onclick="addT()">Ajouter l’enseignant</button></div><p id=tmsg class="' +
+            '</fieldset><button type="button" class=btn onclick="addT()">' +
+            (te.id ? "Enregistrer" : "Ajouter l’enseignant") +
+            "</button>" +
+            (te.id
+              ? '<button type="button" class="btn ghost" style="color:var(--ink)" onclick="ui.tid=\'\';ui.msg=\'\';draw()">Annuler</button>'
+              : "") +
+            '</div><p id=tmsg class="' +
             (ui.err ? "bad" : "ok") +
             '" style="min-height:1.2em;margin:4px 0">' +
             (tab == "ens" && ui.msg ? esc(ui.msg) : "") +
@@ -785,12 +828,14 @@
                       "<tr><td>" +
                       esc(t.nom) +
                       "</td><td>" +
-                      t.mat +
+                      esc(t.mat) +
                       "</td><td class=mut>" +
                       (t.cl.join(", ") || "–") +
                       "</td><td>" +
                       esc(t.tel || "–") +
-                      '</td><td><button type="button" class="btn ghost" onclick="delT(\'' +
+                      '</td><td><button type="button" class="btn ghost" style="color:var(--pri)" onclick="ui.tid=\'' +
+                      t.id +
+                      '\';ui.msg=\'\';draw();window.scrollTo(0,0)">Modifier</button> <button type="button" class="btn ghost" onclick="delT(\'' +
                       t.id +
                       "')\">Retirer</button></td></tr>"
                     );
@@ -1069,13 +1114,13 @@
                       "<tr><td>" +
                       esc(e.nom) +
                       "</td>" +
-                      Ms.map(function (m) {
+                      Ms.map(function (m, mi) {
                         var b = e.id + "|" + m + "|" + ui.t;
                         return (
                           '<td style="border-left:1px solid var(--line)">' +
-                          ni(e.id, m, "c", S.notes[b + "|c"]) +
+                          ni(e.id, mi, m, "c", S.notes[b + "|c"]) +
                           "</td><td>" +
-                          ni(e.id, m, "e", S.notes[b + "|e"]) +
+                          ni(e.id, mi, m, "e", S.notes[b + "|e"]) +
                           "</td>"
                         );
                       }).join("") +
@@ -1166,11 +1211,15 @@
             rest = l.reduce(function (a, e) {
               return a + Math.max(0, FR[e.cl] - pd(e.id));
             }, 0);
+          var pe =
+            S.paie.filter(function (x) {
+              return x.id == ui.pid;
+            })[0] || {};
           return (
             rc() +
             "<h2>Paiements de scolarité (2nd cycle)</h2><p class=mut>Frais de scolarité : " +
             fc(FR[ui.pcl]) +
-            ' par élève</p><div class=row><label>Classe<select onchange="ui.pcl=this.value;draw()">' +
+            ' par élève</p><div class=row><label>Classe<select onchange="ui.pcl=this.value;ui.pid=\'\';draw()">' +
             opts(CL.slice(0, 3), ui.pcl) +
             "</select></label></div>" +
             '<div class=stats><div class="stat hi"><b style="font-size:1.5rem">' +
@@ -1187,11 +1236,30 @@
                 l
                   .map(function (e) {
                     return (
-                      "<option value=" + e.id + ">" + esc(e.nom) + "</option>"
+                      "<option value=" +
+                      e.id +
+                      (pe.el == e.id ? " selected" : "") +
+                      ">" +
+                      esc(e.nom) +
+                      "</option>"
                     );
                   })
                   .join("") +
-                '</select></label><label>Montant (FCFA)<input id=pm type=number min=0 step=500></label><label>Mode<select id=pmo><option>Espèces</option><option>Orange Money</option></select></label><label>N° de transaction (Orange Money)<input id=pr></label><button type="button" class=btn onclick="addP()">Enregistrer le paiement</button></div><p id=pmsg class="' +
+                '</select></label><label>Montant (FCFA)<input id=pm type=number min=0 step=500 value="' +
+                (pe.id ? pe.m : "") +
+                '"></label><label>Mode<select id=pmo><option' +
+                (pe.mode == "Espèces" ? " selected" : "") +
+                ">Espèces</option><option" +
+                (pe.mode == "Orange Money" ? " selected" : "") +
+                '>Orange Money</option></select></label><label>N° de transaction (Orange Money)<input id=pr value="' +
+                esc(pe.ref || "") +
+                '"></label><button type="button" class=btn onclick="addP()">' +
+                (pe.id ? "Modifier le paiement" : "Enregistrer le paiement") +
+                "</button>" +
+                (pe.id
+                  ? '<button type="button" class="btn ghost" style="color:var(--ink)" onclick="ui.pid=\'\';ui.msg=\'\';draw()">Annuler</button>'
+                  : "") +
+                '</div><p id=pmsg class="' +
                 (ui.err ? "bad" : "ok") +
                 '" style="min-height:1.2em;margin:4px 0">' +
                 (tab == "paie" && ui.msg ? esc(ui.msg) : "") +
@@ -1241,9 +1309,11 @@
                       p.mode +
                       "</td><td class=mut>" +
                       esc(p.ref || "–") +
-                      '</td><td><button class="btn ghost" style="color:var(--pri)" onclick="rec(\'' +
+                      '</td><td><button type="button" class="btn ghost" style="color:var(--pri)" onclick="rec(\'' +
                       p.id +
-                      '\')">Reçu</button> <button class="btn ghost" onclick="delP(\'' +
+                      '\')">Reçu</button> <button type="button" class="btn ghost" style="color:var(--pri)" onclick="ui.pid=\'' +
+                      p.id +
+                      '\';ui.msg=\'\';draw();window.scrollTo(0,0)">Modifier</button> <button type="button" class="btn ghost" onclick="delP(\'' +
                       p.id +
                       "')\">Retirer</button></td></tr>"
                     );
@@ -1390,16 +1460,25 @@
           showFeedback("pmsg", "Veuillez saisir un montant valide supérieur à 0.", true);
           return;
         }
+        var existing = S.paie.filter(function (x) {
+          return x.id == ui.pid;
+        })[0];
         var p = {
-          id: "p" + Date.now() + "_" + Math.random().toString(36).slice(2, 5),
+          id: existing ? existing.id : "p" + Date.now() + "_" + Math.random().toString(36).slice(2, 5),
           el: document.getElementById("pe").value,
           m: m,
           mode: document.getElementById("pmo").value,
           ref: document.getElementById("pr").value.trim(),
-          d: new Date().toISOString().slice(0, 10),
+          d: existing ? existing.d : new Date().toISOString().slice(0, 10),
         };
-        S.paie.push(p);
-        ui.msg = "Paiement de " + fc(m) + " enregistré.";
+        if (existing) {
+          Object.assign(existing, p);
+          ui.msg = "Paiement modifié (" + fc(m) + ").";
+        } else {
+          S.paie.push(p);
+          ui.msg = "Paiement de " + fc(m) + " enregistré.";
+        }
+        ui.pid = "";
         ui.err = false;
         save();
         draw();
@@ -1409,9 +1488,13 @@
         S.paie = S.paie.filter(function (p) {
           return p.id != id;
         });
+        if (ui.rid == id) ui.rid = "";
+        if (ui.pid == id) ui.pid = "";
+        ui.msg = "Paiement retiré de la base.";
+        ui.err = false;
         save();
         draw();
-        apiDelete("api/paiements/" + encodeURIComponent(id));
+        apiDelete("api/paiements/" + encodeURIComponent(id), "pmsg");
       }
       function printB(a) {
         document.body.className = a ? "pa" : "";
@@ -1513,8 +1596,11 @@
           showFeedback("tmsg", "Veuillez saisir le nom complet de l’enseignant.", true);
           return;
         }
+        var existing = S.ens.filter(function (x) {
+          return x.id == ui.tid;
+        })[0];
         var t = {
-          id: "t" + Date.now() + "_" + Math.random().toString(36).slice(2, 5),
+          id: existing ? existing.id : "t" + Date.now() + "_" + Math.random().toString(36).slice(2, 5),
           nom: n,
           mat: document.getElementById("tm").value,
           tel: document.getElementById("tt").value.trim(),
@@ -1524,8 +1610,14 @@
               return x.value;
             }),
         };
-        S.ens.push(t);
-        ui.msg = "Enseignant « " + n + " » ajouté.";
+        if (existing) {
+          Object.assign(existing, t);
+          ui.msg = "Fiche de « " + n + " » modifiée.";
+        } else {
+          S.ens.push(t);
+          ui.msg = "Enseignant « " + n + " » ajouté.";
+        }
+        ui.tid = "";
         ui.err = false;
         save();
         draw();
@@ -1535,9 +1627,12 @@
         S.ens = S.ens.filter(function (t) {
           return t.id != id;
         });
+        if (ui.tid == id) ui.tid = "";
+        ui.msg = "Enseignant retiré de la base.";
+        ui.err = false;
         save();
         draw();
-        apiDelete("api/enseignants/" + encodeURIComponent(id));
+        apiDelete("api/enseignants/" + encodeURIComponent(id), "tmsg");
       }
       function pres() {
         var tot = 0,
@@ -1642,7 +1737,14 @@
           S = normalizeState(d);
           save();
           draw();
-          apiPost("api/sync", Object.assign({ replace: true }, S));
+          apiPost(
+            "api/sync",
+            Object.assign({ replace: true }, S),
+            "bkm",
+            "Sauvegarde restaurée et synchronisée en base.",
+          ).then(function () {
+            if (tab == "adm") loadDbStatusAndConfig();
+          });
         } catch (e) {
           m.textContent = "Sauvegarde invalide : rien n’a été modifié.";
         }
@@ -1855,10 +1957,26 @@
               (e.ph ? "Changer la photo" : "Ajouter la photo") +
               '<input type=file accept="image/*" hidden onchange="ph(\'' +
               e.id +
-              "',this)\"></label></div>"
+              '\',this)"></label>' +
+              (e.ph
+                ? '<button type="button" class="btn ghost" onclick="phDel(\'' +
+                  e.id +
+                  "')\">Supprimer</button>"
+                : "") +
+              "</div>"
             : "") +
           "</div>"
         );
+      }
+      function phDel(id) {
+        var e = S.eleves.filter(function (x) {
+          return x.id == id;
+        })[0];
+        if (!e) return;
+        e.ph = "";
+        save();
+        draw();
+        apiPost("api/eleves/" + encodeURIComponent(id) + "/photo", { photo: "" });
       }
       function ph(id, i) {
         var f = i.files[0];
@@ -1959,25 +2077,38 @@
         if (!S.mc) S.mc = {};
         if (!S.mc[ui.cl]) {
           S.mc[ui.cl] = JSON.parse(JSON.stringify(MAof(ui.cl)));
-          apiPost("api/matieres/classe", { classe: ui.cl, matieres: S.mc[ui.cl] });
         }
         return S.mc[ui.cl];
       }
       function mcS(i, v) {
+        var wasNew = !S.mc || !S.mc[ui.cl];
         var M = mcw();
         var nom = Object.keys(M)[i];
+        if (!nom) return;
         var coef = Math.max(0.5, parseFloat(v) || 1);
         M[nom] = coef;
         save();
-        apiPost("api/matieres", { classe: ui.cl, nom: nom, coef: coef });
+        if (wasNew) {
+          apiPost("api/matieres/classe", { classe: ui.cl, matieres: M }, "mmsg", "Coefficient enregistré.");
+        } else {
+          apiPost("api/matieres", { classe: ui.cl, nom: nom, coef: coef }, "mmsg", "Coefficient enregistré.");
+        }
       }
       function mcD(i) {
+        var wasNew = !S.mc || !S.mc[ui.cl];
         var M = mcw();
         var nom = Object.keys(M)[i];
+        if (!nom) return;
         delete M[nom];
+        ui.msg = "Matière « " + nom + " » retirée.";
+        ui.err = false;
         save();
         draw();
-        apiDelete("api/matieres/" + encodeURIComponent(ui.cl) + "/" + encodeURIComponent(nom));
+        if (wasNew) {
+          apiPost("api/matieres/classe", { classe: ui.cl, matieres: M }, "mmsg");
+        } else {
+          apiDelete("api/matieres/" + encodeURIComponent(ui.cl) + "/" + encodeURIComponent(nom), "mmsg");
+        }
       }
       function mcA() {
         var mnEl = document.getElementById("mn");
@@ -1990,16 +2121,22 @@
           showFeedback("mmsg", "Veuillez saisir le nom de la matière.", true);
           return;
         }
+        var wasNew = !S.mc || !S.mc[ui.cl];
         var coef = Math.max(
           0.5,
           parseFloat(document.getElementById("mc").value) || 1,
         );
-        mcw()[n] = coef;
+        var M = mcw();
+        M[n] = coef;
         ui.msg = "Matière « " + n + " » ajoutée.";
         ui.err = false;
         save();
         draw();
-        apiPost("api/matieres", { classe: ui.cl, nom: n, coef: coef }, "mmsg");
+        if (wasNew) {
+          apiPost("api/matieres/classe", { classe: ui.cl, matieres: M }, "mmsg");
+        } else {
+          apiPost("api/matieres", { classe: ui.cl, nom: n, coef: coef }, "mmsg");
+        }
       }
       function ed(c) {
         if (!S.edt) S.edt = {};
@@ -2141,9 +2278,22 @@
         S.eleves = S.eleves.filter(function (e) {
           return e.id != id;
         });
+        S.paie = S.paie.filter(function (p) {
+          return p.el != id;
+        });
+        delete S.dec[id];
+        Object.keys(S.notes).forEach(function (k) {
+          if (k.split("|")[0] == id) delete S.notes[k];
+        });
+        Object.keys(S.abs).forEach(function (k) {
+          if (k.split("|")[1] == id) delete S.abs[k];
+        });
+        if (ui.eid == id) ui.eid = "";
+        ui.msg = "Élève supprimé de la base.";
+        ui.err = false;
         save();
         draw();
-        apiDelete("api/eleves/" + encodeURIComponent(id));
+        apiDelete("api/eleves/" + encodeURIComponent(id), "emsg");
       }
       function nm(id, m, t) {
         var c = S.notes[id + "|" + m + "|" + t + "|c"],
@@ -2154,24 +2304,26 @@
         if (c === undefined) return x;
         return (c + p * x) / (1 + p);
       }
-      function ni(id, m, k, v) {
+      function ni(id, mi, m, k, v) {
         return (
           '<input type=number min=0 max=20 step=0.25 value="' +
           (v === undefined ? "" : v) +
           '" onchange="setN(\'' +
           id +
-          "','" +
-          m +
-          "','" +
+          "'," +
+          mi +
+          ",'" +
           k +
           '\',this)" aria-label="' +
-          m +
+          esc(m) +
           " – note " +
           (k == "c" ? "de classe" : "d’examen") +
           '">'
         );
       }
-      function setN(id, m, x, i) {
+      function setN(id, mi, x, i) {
+        var m = Object.keys(MAof(ui.cl))[mi];
+        if (!m) return;
         var k = id + "|" + m + "|" + ui.t + "|" + x,
           v = parseFloat(i.value);
         if (isNaN(v)) {
