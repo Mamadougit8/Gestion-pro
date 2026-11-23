@@ -496,36 +496,87 @@
           pe: 2,
         };
       }
+      var userInteracted = false;
+      function normalizeState(st) {
+        var base = seed();
+        if (!st || typeof st !== "object") return base;
+        base.eleves = Array.isArray(st.eleves) ? st.eleves.filter(Boolean) : [];
+        base.paie = Array.isArray(st.paie) ? st.paie.filter(Boolean) : [];
+        base.ens = Array.isArray(st.ens)
+          ? st.ens.filter(Boolean).map(function (t) {
+              t.cl = Array.isArray(t.cl) ? t.cl : [];
+              return t;
+            })
+          : [];
+        base.dec = st.dec && typeof st.dec === "object" ? st.dec : {};
+        base.notes = st.notes && typeof st.notes === "object" ? st.notes : {};
+        base.abs = st.abs && typeof st.abs === "object" ? st.abs : {};
+        base.appel = st.appel && typeof st.appel === "object" ? st.appel : {};
+        base.mc = st.mc && typeof st.mc === "object" ? st.mc : {};
+        base.edt = st.edt && typeof st.edt === "object" ? st.edt : {};
+        base.ecole = typeof st.ecole === "string" ? st.ecole : "";
+        base.an = typeof st.an === "string" ? st.an : "";
+        base.dir = typeof st.dir === "string" ? st.dir : "";
+        base.pe = parseFloat(st.pe) > 0 ? parseFloat(st.pe) : 2;
+        Object.keys(base.notes).forEach(function (k) {
+          if (k.split("|").length == 3) {
+            base.notes[k + "|c"] = base.notes[k];
+            delete base.notes[k];
+          }
+        });
+        base.eleves.forEach(function (e) {
+          if (e.cl == "11e année") e.cl = "11e LL";
+          if (e.cl == "12e année") e.cl = "12e TLL";
+        });
+        return base;
+      }
       var S;
       try {
         S = JSON.parse(localStorage.getItem("gs"));
       } catch (e) {}
-      if (!S || !Array.isArray(S.eleves)) S = seed();
-      S.paie = S.paie || [];
-      S.ens = S.ens || [];
-      S.dec = S.dec || {};
-      S.notes = S.notes || {};
-      Object.keys(S.notes).forEach(function (k) {
-        if (k.split("|").length == 3) {
-          S.notes[k + "|c"] = S.notes[k];
-          delete S.notes[k];
-        }
-      });
-      S.appel = S.appel || {};
-      S.eleves.forEach(function (e) {
-        if (e.cl == "11e année") e.cl = "11e LL";
-        if (e.cl == "12e année") e.cl = "12e TLL";
-      });
-      function apiPost(url, data) {
+      S = normalizeState(S);
+      function showFeedback(elId, msg, isErr) {
+        var el = document.getElementById(elId);
+        if (!el) return;
+        el.className = isErr ? "bad" : "ok";
+        el.textContent = msg;
+      }
+      function apiPost(url, data, msgElId, successMsg) {
+        userInteracted = true;
         return fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
-        }).catch(function (e) {
-          console.warn("SQL API write error:", e);
-        });
+        })
+          .then(function (r) {
+            return r
+              .json()
+              .catch(function () {
+                return { ok: r.ok };
+              })
+              .then(function (res) {
+                if (!r.ok || (res && res.ok === false)) {
+                  if (msgElId) {
+                    showFeedback(
+                      msgElId,
+                      "Enregistré localement, erreur serveur : " +
+                        ((res && res.error) || "HTTP " + r.status),
+                      true,
+                    );
+                  }
+                } else if (msgElId && successMsg) {
+                  showFeedback(msgElId, successMsg, false);
+                }
+                return res;
+              });
+          })
+          .catch(function (e) {
+            console.warn("SQL API write error:", e);
+            return { ok: false, error: e.message };
+          });
       }
       function apiDelete(url) {
+        userInteracted = true;
         return fetch(url, { method: "DELETE" }).catch(function (e) {
           console.warn("SQL API delete error:", e);
         });
@@ -602,24 +653,33 @@
       }
       function go(t) {
         tab = t;
+        ui.msg = "";
+        ui.err = false;
         draw();
         if (t == "adm") {
           loadDbStatusAndConfig();
         }
       }
       function draw() {
-        document.getElementById("nav").innerHTML = TABS.map(function (t) {
-          return (
-            '<button aria-current="' +
-            (t[0] == tab) +
-            '" onclick="go(\'' +
-            t[0] +
-            "')\">" +
-            t[1] +
-            "</button>"
-          );
-        }).join("");
-        document.getElementById("main").innerHTML = V[tab]();
+        try {
+          S = normalizeState(S);
+          document.getElementById("nav").innerHTML = TABS.map(function (t) {
+            return (
+              '<button type="button" aria-current="' +
+              (t[0] == tab) +
+              '" onclick="go(\'' +
+              t[0] +
+              "')\">" +
+              t[1] +
+              "</button>"
+            );
+          }).join("");
+          document.getElementById("main").innerHTML = V[tab]();
+        } catch (err) {
+          console.error("Erreur affichage:", err);
+          document.getElementById("main").innerHTML =
+            '<p class="bad">Erreur d’affichage : ' + esc(err.message) + "</p>";
+        }
       }
       var V = {
         home: function () {
@@ -712,7 +772,11 @@
                 "</label>"
               );
             }).join("") +
-            '</fieldset><button class=btn onclick="addT()">Ajouter l’enseignant</button></div>' +
+            '</fieldset><button type="button" class=btn onclick="addT()">Ajouter l’enseignant</button></div><p id=tmsg class="' +
+            (ui.err ? "bad" : "ok") +
+            '" style="min-height:1.2em;margin:4px 0">' +
+            (tab == "ens" && ui.msg ? esc(ui.msg) : "") +
+            "</p>" +
             (S.ens.length
               ? "<div class=wrap><table><tr><th>Nom</th><th>Matière</th><th>Classes</th><th>Téléphone</th><th></th></tr>" +
                 S.ens
@@ -726,7 +790,7 @@
                       (t.cl.join(", ") || "–") +
                       "</td><td>" +
                       esc(t.tel || "–") +
-                      '</td><td><button class="btn ghost" onclick="delT(\'' +
+                      '</td><td><button type="button" class="btn ghost" onclick="delT(\'' +
                       t.id +
                       "')\">Retirer</button></td></tr>"
                     );
@@ -877,7 +941,11 @@
                 );
               })
               .join("") +
-            '</table></div><div class=row><label>Nouvelle matière<input id=mn></label><label>Coefficient<input id=mc type=number min=0.5 step=0.5 value=1></label><button class=btn onclick="mcA()">Ajouter</button></div><p class=mut>Les changements concernent seulement la classe choisie. Retirer une matière garde les notes déjà saisies, mais elles ne comptent plus.</p>'
+            '</table></div><div class=row><label>Nouvelle matière<input id=mn></label><label>Coefficient<input id=mc type=number min=0.5 step=0.5 value=1></label><button type="button" class=btn onclick="mcA()">Ajouter</button></div><p id=mmsg class="' +
+            (ui.err ? "bad" : "ok") +
+            '" style="min-height:1.2em;margin:4px 0">' +
+            (tab == "mat" && ui.msg ? esc(ui.msg) : "") +
+            '</p><p class=mut>Les changements concernent seulement la classe choisie. Retirer une matière garde les notes déjà saisies, mais elles ne comptent plus.</p>'
           );
         },
         edt: function () {
@@ -956,9 +1024,9 @@
                       esc(e.pa || "–") +
                       "</td><td>" +
                       esc(e.tel || "–") +
-                      '</td><td><button class="btn ghost" style="color:var(--pri)" onclick="ui.eid=\'' +
+                      '</td><td><button type="button" class="btn ghost" style="color:var(--pri)" onclick="ui.eid=\'' +
                       e.id +
-                      '\';draw();window.scrollTo(0,0)">Modifier</button> <button class="btn ghost" onclick="delE(\'' +
+                      '\';ui.msg=\'\';draw();window.scrollTo(0,0)">Modifier</button> <button type="button" class="btn ghost" onclick="delE(\'' +
                       e.id +
                       "')\">Retirer</button></td></tr>"
                     );
@@ -1123,7 +1191,11 @@
                     );
                   })
                   .join("") +
-                '</select></label><label>Montant (FCFA)<input id=pm type=number min=0 step=500></label><label>Mode<select id=pmo><option>Espèces</option><option>Orange Money</option></select></label><label>N° de transaction (Orange Money)<input id=pr></label><button class=btn onclick="addP()">Enregistrer le paiement</button></div>'
+                '</select></label><label>Montant (FCFA)<input id=pm type=number min=0 step=500></label><label>Mode<select id=pmo><option>Espèces</option><option>Orange Money</option></select></label><label>N° de transaction (Orange Money)<input id=pr></label><button type="button" class=btn onclick="addP()">Enregistrer le paiement</button></div><p id=pmsg class="' +
+                (ui.err ? "bad" : "ok") +
+                '" style="min-height:1.2em;margin:4px 0">' +
+                (tab == "paie" && ui.msg ? esc(ui.msg) : "") +
+                "</p>"
               : "<p class=mut>Aucun élève dans cette classe.</p>") +
             (l.length
               ? "<h3>Situation par élève</h3><div class=wrap><table><tr><th>Élève</th><th>Payé</th><th>Reste</th><th>Statut</th></tr>" +
@@ -1308,13 +1380,18 @@
         return x.toLocaleString("fr-FR") + " FCFA";
       }
       function addP() {
-        var m = parseFloat(document.getElementById("pm").value);
+        var pmEl = document.getElementById("pm");
+        var m = parseFloat(pmEl ? pmEl.value : "");
         if (!(m > 0)) {
-          document.getElementById("pm").focus();
+          if (pmEl) {
+            pmEl.style.borderColor = "var(--bad)";
+            pmEl.focus();
+          }
+          showFeedback("pmsg", "Veuillez saisir un montant valide supérieur à 0.", true);
           return;
         }
         var p = {
-          id: "p" + Date.now(),
+          id: "p" + Date.now() + "_" + Math.random().toString(36).slice(2, 5),
           el: document.getElementById("pe").value,
           m: m,
           mode: document.getElementById("pmo").value,
@@ -1322,9 +1399,11 @@
           d: new Date().toISOString().slice(0, 10),
         };
         S.paie.push(p);
+        ui.msg = "Paiement de " + fc(m) + " enregistré.";
+        ui.err = false;
         save();
         draw();
-        apiPost("api/paiements", p);
+        apiPost("api/paiements", p, "pmsg");
       }
       function delP(id) {
         S.paie = S.paie.filter(function (p) {
@@ -1424,13 +1503,18 @@
         apiPost("api/appels", { date: ui.date, classe: ui.cl, statut: 1 });
       }
       function addT() {
-        var n = document.getElementById("tn").value.trim();
+        var tnEl = document.getElementById("tn");
+        var n = tnEl ? tnEl.value.trim() : "";
         if (!n) {
-          document.getElementById("tn").focus();
+          if (tnEl) {
+            tnEl.style.borderColor = "var(--bad)";
+            tnEl.focus();
+          }
+          showFeedback("tmsg", "Veuillez saisir le nom complet de l’enseignant.", true);
           return;
         }
         var t = {
-          id: "t" + Date.now(),
+          id: "t" + Date.now() + "_" + Math.random().toString(36).slice(2, 5),
           nom: n,
           mat: document.getElementById("tm").value,
           tel: document.getElementById("tt").value.trim(),
@@ -1441,9 +1525,11 @@
             }),
         };
         S.ens.push(t);
+        ui.msg = "Enseignant « " + n + " » ajouté.";
+        ui.err = false;
         save();
         draw();
-        apiPost("api/enseignants", t);
+        apiPost("api/enseignants", t, "tmsg");
       }
       function delT(id) {
         S.ens = S.ens.filter(function (t) {
@@ -1553,11 +1639,7 @@
         try {
           var d = JSON.parse(document.getElementById("bkt").value);
           if (!d.eleves) throw 0;
-          S = d;
-          S.paie = S.paie || [];
-          S.ens = S.ens || [];
-          S.appel = S.appel || {};
-          S.dec = S.dec || {};
+          S = normalizeState(d);
           save();
           draw();
           apiPost("api/sync", Object.assign({ replace: true }, S));
@@ -1656,11 +1738,11 @@
       function ef() {
         var x = fx();
         return (
-          "<h2>" +
+          '<form onsubmit="event.preventDefault();addE()"><h2>' +
           (x.id ? "Modifier la fiche de l’élève" : "Inscrire un élève") +
-          '</h2><div class=row><label>Nom complet<input id=nn value="' +
+          '</h2><div class=row><label>Nom complet *<input id=nn value="' +
           esc(x.nom || "") +
-          '"></label><label>Matricule<input id=nm2 value="' +
+          '" placeholder="Ex : Aminata Traoré"></label><label>Matricule<input id=nm2 value="' +
           esc(x.mat || "") +
           '"></label><label>Sexe<select id=ns><option value="">–</option><option value="F"' +
           (x.sx == "F" ? " selected" : "") +
@@ -1678,48 +1760,67 @@
           esc(x.tel || "") +
           '"></label><label>Adresse<input id=na value="' +
           esc(x.ad || "") +
-          '"></label><button class=btn onclick="addE()">' +
+          '"></label><button type="submit" class=btn>' +
           (x.id ? "Enregistrer" : "Ajouter l’élève") +
           "</button>" +
           (x.id
-            ? '<button class="btn ghost" style="color:var(--ink)" onclick="ui.eid=\'\';draw()">Annuler</button>'
+            ? '<button type="button" class="btn ghost" style="color:var(--ink)" onclick="ui.eid=\'\';ui.msg=\'\';draw()">Annuler</button>'
             : "") +
-          "</div>"
+          '</div><p id=emsg class="' +
+          (ui.err ? "bad" : "ok") +
+          '" style="min-height:1.2em;margin:4px 0">' +
+          (tab == "eleves" && ui.msg ? esc(ui.msg) : "") +
+          "</p></form>"
         );
       }
       function addE() {
+        var nnEl = document.getElementById("nn");
         var g = function (i) {
-            return document.getElementById(i).value.trim();
+            var el = document.getElementById(i);
+            return el ? el.value.trim() : "";
           },
           n = g("nn");
         if (!n) {
-          document.getElementById("nn").focus();
+          if (nnEl) {
+            nnEl.style.borderColor = "var(--bad)";
+            nnEl.focus();
+          }
+          showFeedback("emsg", "Veuillez saisir le nom complet de l’élève.", true);
           return;
         }
+        if (nnEl) nnEl.style.borderColor = "";
         var o = {
             nom: n,
             mat: g("nm2"),
             sx: g("ns"),
             dn: g("nd"),
             ln: g("nl"),
-            cl: g("nc"),
+            cl: g("nc") || CL[0],
             pa: g("np"),
             tel: g("nt"),
             ad: g("na"),
           },
-          x = fx();
+          x = fx(),
+          isEdit = Boolean(x.id);
         if (x.id) {
           Object.assign(x, o);
           o.id = x.id;
         } else {
-          o.id = "e" + Date.now();
+          o.id = "e" + Date.now() + "_" + Math.random().toString(36).slice(2, 5);
           S.eleves.push(o);
         }
         ui.eid = "";
         ui.cl = o.cl;
+        if (ui.fcl && ui.fcl !== o.cl) {
+          ui.fcl = "";
+        }
+        ui.msg = isEdit
+          ? "Fiche de « " + n + " » mise à jour."
+          : "Élève « " + n + " » ajouté dans " + o.cl + ".";
+        ui.err = false;
         save();
         draw();
-        apiPost("api/eleves", o);
+        apiPost("api/eleves", o, "emsg");
       }
       function cs(e, ed) {
         return (
@@ -1879,16 +1980,26 @@
         apiDelete("api/matieres/" + encodeURIComponent(ui.cl) + "/" + encodeURIComponent(nom));
       }
       function mcA() {
-        var n = document.getElementById("mn").value.trim();
-        if (!n) return;
+        var mnEl = document.getElementById("mn");
+        var n = mnEl ? mnEl.value.trim() : "";
+        if (!n) {
+          if (mnEl) {
+            mnEl.style.borderColor = "var(--bad)";
+            mnEl.focus();
+          }
+          showFeedback("mmsg", "Veuillez saisir le nom de la matière.", true);
+          return;
+        }
         var coef = Math.max(
           0.5,
           parseFloat(document.getElementById("mc").value) || 1,
         );
         mcw()[n] = coef;
+        ui.msg = "Matière « " + n + " » ajoutée.";
+        ui.err = false;
         save();
         draw();
-        apiPost("api/matieres", { classe: ui.cl, nom: n, coef: coef });
+        apiPost("api/matieres", { classe: ui.cl, nom: n, coef: coef }, "mmsg");
       }
       function ed(c) {
         if (!S.edt) S.edt = {};
@@ -2388,8 +2499,9 @@
             return res.json();
           })
           .then(function (resp) {
+            if (userInteracted) return;
             if (resp && resp.ok && resp.data) {
-              var d = resp.data;
+              var d = normalizeState(resp.data);
               if (hasAnyStateData(d)) {
                 S = d;
                 save();
